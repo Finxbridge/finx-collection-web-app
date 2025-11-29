@@ -1,0 +1,9 @@
+# This file keeps the assets folder in git
+# Place images, fonts, and other static assets here
+
+# Suggested structure:
+# assets/
+#   images/
+#   icons/
+#   fonts/
+#   videos/

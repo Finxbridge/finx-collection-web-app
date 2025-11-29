@@ -1,0 +1,378 @@
+FINXCOLLECTION FRONTEND - COMPLETE PROJECT STRUCTURE
+====================================================
+
+frontend/
+│
+├── docs/                                    # Documentation
+│   ├── FOLDER_STRUCTURE.md                 # Detailed folder explanations
+│   ├── STYLE_GUIDE.md                      # Coding standards & conventions
+│   └── ARCHITECTURE.md                     # Architecture documentation
+│
+├── public/                                  # Static files (served as-is)
+│   └── vite.svg                            # Placeholder favicon
+│
+├── src/                                     # Source code
+│   │
+│   ├── assets/                             # Static assets (images, fonts, icons)
+│   │   └── .gitkeep                        # Keeps folder in git
+│   │
+│   ├── components/                         # React components
+│   │   │
+│   │   ├── common/                         # Reusable UI components
+│   │   │   ├── Button/
+│   │   │   │   ├── Button.tsx              # Button component
+│   │   │   │   ├── Button.css              # Button styles
+│   │   │   │   └── index.ts                # Barrel export
+│   │   │   │
+│   │   │   ├── Input/
+│   │   │   │   ├── Input.tsx               # Input component
+│   │   │   │   ├── Input.css               # Input styles
+│   │   │   │   └── index.ts                # Barrel export
+│   │   │   │
+│   │   │   └── index.ts                    # Export all common components
+│   │   │
+│   │   └── features/                       # Feature-specific components
+│   │       ├── LoginForm/
+│   │       │   ├── LoginForm.tsx           # Login form component
+│   │       │   ├── LoginForm.css           # Login form styles
+│   │       │   └── index.ts                # Barrel export
+│   │       │
+│   │       └── index.ts                    # Export all feature components
+│   │
+│   ├── config/                             # Configuration & constants
+│   │   ├── index.ts                        # Main config (env variables)
+│   │   └── constants.ts                    # App constants (routes, endpoints)
+│   │
+│   ├── hooks/                              # Custom React hooks
+│   │   ├── useAuth.ts                      # Authentication hook
+│   │   ├── useDebounce.ts                  # Debounce hook
+│   │   ├── useLocalStorage.ts              # LocalStorage hook
+│   │   ├── useToggle.ts                    # Toggle state hook
+│   │   └── index.ts                        # Export all hooks
+│   │
+│   ├── layouts/                            # Layout components
+│   │   ├── MainLayout/
+│   │   │   ├── MainLayout.tsx              # Main app layout
+│   │   │   ├── MainLayout.css              # Main layout styles
+│   │   │   └── index.ts                    # Barrel export
+│   │   │
+│   │   ├── AuthLayout/
+│   │   │   ├── AuthLayout.tsx              # Auth pages layout
+│   │   │   ├── AuthLayout.css              # Auth layout styles
+│   │   │   └── index.ts                    # Barrel export
+│   │   │
+│   │   └── index.ts                        # Export all layouts
+│   │
+│   ├── pages/                              # Page components (routes)
+│   │   ├── HomePage/
+│   │   │   ├── HomePage.tsx                # Home page
+│   │   │   ├── HomePage.css                # Home page styles
+│   │   │   └── index.ts                    # Barrel export
+│   │   │
+│   │   ├── LoginPage/
+│   │   │   ├── LoginPage.tsx               # Login page
+│   │   │   └── index.ts                    # Barrel export
+│   │   │
+│   │   ├── DashboardPage/
+│   │   │   ├── DashboardPage.tsx           # Dashboard page
+│   │   │   ├── DashboardPage.css           # Dashboard styles
+│   │   │   └── index.ts                    # Barrel export
+│   │   │
+│   │   ├── NotFoundPage/
+│   │   │   ├── NotFoundPage.tsx            # 404 page
+│   │   │   ├── NotFoundPage.css            # 404 styles
+│   │   │   └── index.ts                    # Barrel export
+│   │   │
+│   │   └── index.ts                        # Export all pages
+│   │
+│   ├── routes/                             # Routing configuration
+│   │   ├── index.tsx                       # Main routes config
+│   │   └── ProtectedRoute.tsx              # Auth guard component
+│   │
+│   ├── services/                           # External services
+│   │   └── api/                            # API services
+│   │       ├── axios.config.ts             # Axios instance + interceptors
+│   │       ├── auth.service.ts             # Auth API calls
+│   │       ├── user.service.ts             # User API calls
+│   │       └── index.ts                    # Export all services
+│   │
+│   ├── store/                              # State management
+│   │   ├── AuthContext.tsx                 # Auth context + provider
+│   │   ├── ThemeContext.tsx                # Theme context + provider
+│   │   └── index.ts                        # Export all contexts
+│   │
+│   ├── styles/                             # Global styles
+│   │   └── index.css                       # Global CSS + variables
+│   │
+│   ├── types/                              # TypeScript types
+│   │   ├── index.ts                        # Re-export all types
+│   │   ├── user.types.ts                   # User-related types
+│   │   ├── api.types.ts                    # API types
+│   │   └── common.types.ts                 # Common utility types
+│   │
+│   ├── utils/                              # Utility functions
+│   │   ├── index.ts                        # Export all utils
+│   │   ├── format.ts                       # Formatting utilities
+│   │   ├── validation.ts                   # Validation functions
+│   │   ├── helpers.ts                      # General helpers
+│   │   └── storage.ts                      # LocalStorage helpers
+│   │
+│   ├── App.tsx                             # Main App component
+│   └── main.tsx                            # Application entry point
+│
+├── .env.example                            # Environment variables template
+├── .eslintrc.cjs                           # ESLint configuration
+├── .gitignore                              # Git ignore rules
+├── .prettierrc                             # Prettier configuration
+├── index.html                              # HTML entry point
+├── package.json                            # Dependencies & scripts
+├── README.md                               # Project documentation
+├── tsconfig.json                           # TypeScript configuration
+├── tsconfig.node.json                      # TypeScript config for Node
+├── vite.config.ts                          # Vite configuration
+└── PROJECT_STRUCTURE.txt                   # This file
+
+
+KEY CONVENTIONS
+===============
+
+File Naming:
+------------
+✓ Components: PascalCase (Button.tsx, UserProfile.tsx)
+✓ Utilities: camelCase (format.ts, validation.ts)
+✓ Types: kebab-case (user.types.ts, api.types.ts)
+✓ Styles: Match component name (Button.css)
+✓ Tests: Component name + .test.tsx (Button.test.tsx)
+
+Folder Organization:
+-------------------
+✓ Each component in its own folder
+✓ Include index.ts for barrel exports
+✓ Colocate styles, tests with component
+✓ Group by feature/domain, not file type
+
+Import Aliases:
+--------------
+@/              → src/
+@components/    → src/components/
+@pages/         → src/pages/
+@hooks/         → src/hooks/
+@services/      → src/services/
+@utils/         → src/utils/
+@types/         → src/types/
+@config/        → src/config/
+@store/         → src/store/
+@assets/        → src/assets/
+@layouts/       → src/layouts/
+@styles/        → src/styles/
+
+
+QUICK START
+===========
+
+1. Install dependencies:
+   npm install
+
+2. Copy environment file:
+   cp .env.example .env
+
+3. Start development server:
+   npm run dev
+
+4. Open browser:
+   http://localhost:3000
+
+
+AVAILABLE SCRIPTS
+=================
+
+npm run dev      → Start development server
+npm run build    → Build for production
+npm run preview  → Preview production build
+npm run lint     → Run ESLint
+npm run format   → Format code with Prettier
+npm test         → Run tests
+
+
+DOCUMENTATION
+=============
+
+📖 README.md               → Getting started & overview
+📖 docs/FOLDER_STRUCTURE.md → Detailed folder explanations
+📖 docs/STYLE_GUIDE.md      → Coding standards & best practices
+📖 docs/ARCHITECTURE.md     → Architecture decisions & patterns
+
+
+WHEN TO USE EACH FOLDER
+========================
+
+/components/common/
+  → Reusable UI components (Button, Input, Modal)
+  → Used in 2+ places
+  → No business logic
+
+/components/features/
+  → Feature-specific components (LoginForm, UserProfile)
+  → Contains business logic
+  → Uses API services
+
+/pages/
+  → Top-level route components
+  → One page = one route
+  → Composes layouts & features
+
+/layouts/
+  → Page structure components
+  → Header, sidebar, footer
+  → Wraps page content
+
+/hooks/
+  → Custom React hooks
+  → Reusable stateful logic
+  → Start with "use" prefix
+
+/services/api/
+  → API calls
+  → One service per resource
+  → Centralized HTTP logic
+
+/store/
+  → Global state management
+  → Auth, theme, etc.
+  → Context or Zustand
+
+/utils/
+  → Pure helper functions
+  → Formatters, validators
+  → No React dependencies
+
+/types/
+  → TypeScript definitions
+  → Interfaces & types
+  → Organized by domain
+
+/config/
+  → App configuration
+  → Constants
+  → Environment variables
+
+
+STATE MANAGEMENT GUIDE
+======================
+
+useState          → Local component state
+Context API       → Global state (auth, theme)
+Zustand (opt)     → Complex global state
+React Query       → Server state (API data)
+
+
+COMPONENT DECISION TREE
+========================
+
+Is it a full page?
+  YES → /pages
+
+Is it a layout wrapper?
+  YES → /layouts
+
+Is it reusable UI without business logic?
+  YES → /components/common
+
+Is it feature-specific with business logic?
+  YES → /components/features
+
+
+API INTEGRATION PATTERN
+========================
+
+1. Define types in /types
+2. Create service in /services/api
+3. Use React Query in component/hook
+4. Handle loading/error states
+
+Example:
+  types/user.types.ts        → interface User
+  services/api/user.service.ts → userService.getAll()
+  hooks/useUsers.ts          → useQuery hook
+  pages/UsersPage.tsx        → Use hook in component
+
+
+BEST PRACTICES
+==============
+
+✓ Always use TypeScript types
+✓ No "any" types without justification
+✓ Keep components small (< 200 lines)
+✓ Extract logic into custom hooks
+✓ Use barrel exports (index.ts)
+✓ Colocate related files
+✓ Follow naming conventions
+✓ Add JSDoc comments
+✓ Handle errors properly
+✓ Show loading states
+✓ Consider accessibility
+
+
+CODE REVIEW CHECKLIST
+======================
+
+Before submitting PR:
+□ npm run lint (no errors)
+□ npm run format (code formatted)
+□ npm test (tests pass)
+□ Types defined for all props
+□ No console.logs
+□ Error handling implemented
+□ Loading states shown
+□ Accessibility considered
+□ Documentation updated
+□ Meaningful commit messages
+
+
+TEAM COLLABORATION
+==================
+
+Git Workflow:
+1. git checkout -b feature/feature-name
+2. Make changes
+3. git add .
+4. git commit -m "feat: description"
+5. git push origin feature/feature-name
+6. Create Pull Request
+
+Commit Message Format:
+  feat: Add user profile page
+  fix: Resolve login redirect bug
+  refactor: Simplify auth logic
+  docs: Update README
+  style: Format code
+  test: Add login form tests
+
+
+TROUBLESHOOTING
+===============
+
+Port already in use:
+  npm run dev -- --port 3001
+
+Type errors:
+  rm -rf node_modules/.vite
+  npm run dev
+
+Build fails:
+  rm -rf dist node_modules
+  npm install
+  npm run build
+
+
+RESOURCES
+=========
+
+React:        https://react.dev
+TypeScript:   https://www.typescriptlang.org/docs
+Vite:         https://vitejs.dev/guide
+React Router: https://reactrouter.com
+React Query:  https://tanstack.com/query/latest
+
+
+For more detailed information, see the documentation files in the /docs folder.
