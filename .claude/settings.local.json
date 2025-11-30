@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(npx tsc:*)",
+      "Bash(test:*)",
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(tasklist:*)",
+      "Bash(taskkill /F /PID 61084)",
+      "Bash(taskkill:*)",
+      "Bash(if not exist \"c:\\Projects\\finxCollection-frontend\\frontend\\src\\components\\layout\" mkdir \"c:\\Projects\\finxCollection-frontend\\frontend\\src\\components\\layout\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

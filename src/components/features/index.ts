@@ -3,4 +3,4 @@
  * Export all feature-specific components
  */
 
-export { LoginForm } from './LoginForm'
+export { LoginForm } from './LoginForm/LoginForm'
