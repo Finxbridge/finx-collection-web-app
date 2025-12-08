@@ -3,4 +3,4 @@
  */
 
 export { Sidebar } from './Sidebar'
-export default Sidebar
+export { Sidebar as default } from './Sidebar'

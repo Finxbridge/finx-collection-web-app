@@ -512,6 +512,158 @@
   }
 }
 
+/* Session Modal */
+.session-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.session-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.session-modal__icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1.5rem;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.session-modal__icon svg {
+  width: 32px;
+  height: 32px;
+  color: #d97706;
+}
+
+.session-modal__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0 0 0.75rem;
+}
+
+.session-modal__message {
+  font-size: 0.9375rem;
+  color: #4b5563;
+  margin: 0 0 0.5rem;
+  line-height: 1.5;
+}
+
+.session-modal__info {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0 0 1.5rem;
+}
+
+.session-modal__actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.session-modal__btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.session-modal__btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.session-modal__btn--cancel {
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+}
+
+.session-modal__btn--cancel:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.session-modal__btn--logout {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.session-modal__btn--logout:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+}
+
+.btn-spinner--sm {
+  width: 16px;
+  height: 16px;
+}
+
+/* Dark mode for modal */
+@media (prefers-color-scheme: dark) {
+  .session-modal {
+    background: #1f2937;
+  }
+
+  .session-modal__title {
+    color: #f9fafb;
+  }
+
+  .session-modal__message {
+    color: #d1d5db;
+  }
+
+  .session-modal__info {
+    color: #9ca3af;
+  }
+
+  .session-modal__btn--cancel {
+    background: #374151;
+    color: #d1d5db;
+    border-color: #4b5563;
+  }
+
+  .session-modal__btn--cancel:hover:not(:disabled) {
+    background: #4b5563;
+  }
+}
+
 /* Print Styles */
 @media print {
   .login-container {

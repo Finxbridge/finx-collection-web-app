@@ -26,7 +26,7 @@ export default defineConfig({
     strictPort: true, // Fail if port 3000 is already in use instead of using next available port
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8080',
         changeOrigin: true,
       },
     },

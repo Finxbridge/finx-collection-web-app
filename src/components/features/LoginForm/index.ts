@@ -3,4 +3,4 @@
  */
 
 export { LoginForm } from './LoginForm'
-export default LoginForm
+export { LoginForm as default } from './LoginForm'

@@ -5,7 +5,7 @@
 
 export const config = {
   api: {
-    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
+    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1',
     timeout: Number(import.meta.env.VITE_API_TIMEOUT) || 30000,
   },
   app: {
@@ -19,6 +19,7 @@ export const config = {
   storage: {
     tokenKey: 'app_access_token',
     refreshTokenKey: 'app_refresh_token',
+    sessionIdKey: 'app_session_id',
     userKey: 'app_user',
   },
 } as const
