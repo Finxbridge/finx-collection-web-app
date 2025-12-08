@@ -3,7 +3,7 @@
  * Manages theme state (light/dark mode)
  */
 
-import { createContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useEffect, ReactNode } from 'react'
 import { useLocalStorage } from '@hooks/useLocalStorage'
 
 type Theme = 'light' | 'dark'

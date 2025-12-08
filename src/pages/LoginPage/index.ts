@@ -3,4 +3,4 @@
  */
 
 export { LoginPage } from './LoginPage'
-export default LoginPage
+export { LoginPage as default } from './LoginPage'

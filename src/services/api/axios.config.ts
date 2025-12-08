@@ -48,7 +48,7 @@ apiClient.interceptors.response.use(
 
         // Attempt to refresh token
         const response = await axios.post(
-          `${config.api.baseUrl}/auth/refresh`,
+          `${config.api.baseUrl}/access/auth/refresh-token`,
           { refreshToken }
         )
 
@@ -70,8 +70,9 @@ apiClient.interceptors.response.use(
 
     // Transform error to consistent format
     const apiError: ApiError = {
-      success: false,
+      status: 'failure',
       message: error.response?.data?.message || error.message || 'An error occurred',
+      data: null,
       errors: error.response?.data?.errors,
       statusCode: error.response?.status || 500,
     }

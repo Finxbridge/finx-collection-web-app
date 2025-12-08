@@ -11,7 +11,10 @@
       "Bash(tasklist:*)",
       "Bash(taskkill /F /PID 61084)",
       "Bash(taskkill:*)",
-      "Bash(if not exist \"c:\\Projects\\finxCollection-frontend\\frontend\\src\\components\\layout\" mkdir \"c:\\Projects\\finxCollection-frontend\\frontend\\src\\components\\layout\")"
+      "Bash(if not exist \"c:\\Projects\\finxCollection-frontend\\frontend\\src\\components\\layout\" mkdir \"c:\\Projects\\finxCollection-frontend\\frontend\\src\\components\\layout\")",
+      "Bash(if not exist \"C:\\projects\\collections_frontend\\finx-collection-web-app\\src\\pages\\MasterDataPage\" mkdir \"C:\\projects\\collections_frontend\\finx-collection-web-app\\src\\pages\\MasterDataPage\")",
+      "Bash(tree:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

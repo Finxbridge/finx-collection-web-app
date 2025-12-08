@@ -3,4 +3,4 @@
  */
 
 export { AuthLayout } from './AuthLayout'
-export default AuthLayout
+export { AuthLayout as default } from './AuthLayout'

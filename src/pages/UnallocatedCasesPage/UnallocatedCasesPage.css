@@ -1,0 +1,226 @@
+/**
+ * Unallocated Cases Page Styles
+ */
+
+.unallocated-page {
+  padding: var(--spacing-lg);
+}
+
+/* Header */
+.unallocated-page__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-lg);
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.unallocated-page__title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--color-gray-900);
+  margin: 0;
+}
+
+.unallocated-page__subtitle {
+  font-size: 0.875rem;
+  color: var(--color-gray-500);
+  margin-top: var(--spacing-xs);
+}
+
+.unallocated-page__stats {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.stat-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-gray-200);
+}
+
+.stat-chip__value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.stat-chip__label {
+  font-size: 0.75rem;
+  color: var(--color-gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Table */
+.unallocated-page__table {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-gray-200);
+  overflow: hidden;
+  margin-bottom: var(--spacing-lg);
+}
+
+/* Case Info */
+.case-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.case-number {
+  font-weight: 500;
+  color: var(--color-gray-900);
+}
+
+.external-case-id {
+  font-size: 0.75rem;
+  color: var(--color-gray-500);
+  font-family: var(--font-mono);
+}
+
+/* Customer Info */
+.customer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.customer-name {
+  font-weight: 500;
+  color: var(--color-gray-900);
+}
+
+.customer-mobile {
+  font-size: 0.75rem;
+  color: var(--color-gray-500);
+}
+
+/* Loan Account */
+.loan-account {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--color-gray-700);
+}
+
+/* Outstanding Amount */
+.outstanding-amount {
+  font-weight: 600;
+  color: var(--color-gray-900);
+}
+
+/* DPD Value */
+.dpd-value {
+  font-weight: 500;
+  color: var(--color-gray-700);
+}
+
+/* Bucket Badge */
+.bucket-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.bucket-badge--default {
+  background: var(--color-gray-100);
+  color: var(--color-gray-600);
+}
+
+.bucket-badge--info {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--color-primary);
+}
+
+.bucket-badge--warning {
+  background: rgba(249, 115, 22, 0.1);
+  color: var(--color-warning);
+}
+
+.bucket-badge--danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-danger);
+}
+
+/* Table Actions */
+.table-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.table-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-gray-500);
+  transition: all 0.2s;
+}
+
+.table-action-btn:hover {
+  background: var(--color-gray-100);
+  color: var(--color-gray-700);
+}
+
+.table-action-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Alert */
+.alert {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.alert--error {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-danger);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.alert button {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-weight: 500;
+  padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .unallocated-page__table {
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .unallocated-page {
+    padding: var(--spacing-md);
+  }
+
+  .unallocated-page__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

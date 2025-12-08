@@ -3,46 +3,127 @@
  * Professional login interface for collection management system
  */
 
-import { useState, FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useRef, FormEvent } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@hooks'
+import { authService } from '@services/api'
 import { ROUTES } from '@config/constants'
+import type { LoginResponse } from '@types'
 import './LoginForm.css'
+
+interface ActiveSessionInfo {
+  username: string
+  message: string
+  password: string
+}
 
 export function LoginForm() {
   const navigate = useNavigate()
   const { login } = useAuth()
 
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  // Use refs instead of state to allow browser autofill to work
+  const usernameRef = useRef<HTMLInputElement>(null)
+  const passwordRef = useRef<HTMLInputElement>(null)
+
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const [rememberMe, setRememberMe] = useState(false)
+  const [activeSessionModal, setActiveSessionModal] = useState<ActiveSessionInfo | null>(null)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  const handleLoginSuccess = async (loginResponse: LoginResponse) => {
+    // Handle first login - request OTP and redirect to verification
+    if (loginResponse.isFirstLogin) {
+      // Request OTP for first time login
+      const otpResponse = await authService.requestOtp({
+        username: loginResponse.email,
+        purpose: 'LOGIN'
+      })
+
+      navigate(ROUTES.VERIFY_OTP, {
+        state: {
+          email: loginResponse.email,
+          username: loginResponse.username,
+          requestId: otpResponse.requestId,
+          purpose: 'LOGIN',
+          isFirstLogin: true
+        }
+      })
+      return
+    }
+
+    // Handle OTP requirement (two-factor auth)
+    if (loginResponse.requiresOtp) {
+      navigate(ROUTES.VERIFY_OTP, {
+        state: {
+          username: loginResponse.username,
+          purpose: 'TWO_FACTOR'
+        }
+      })
+      return
+    }
+
+    // Normal login - redirect to dashboard
+    navigate(ROUTES.DASHBOARD)
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError('')
 
-    // Validation
-    if (!email || !password) {
-      setError('Please fill in all fields')
-      return
-    }
+    const username = usernameRef.current?.value || ''
+    const password = passwordRef.current?.value || ''
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('Please enter a valid email address')
+    // Validation
+    if (!username || !password) {
+      setError('Please fill in all fields')
       return
     }
 
     try {
       setIsLoading(true)
-      await login(email, password)
-      navigate(ROUTES.DASHBOARD)
+      const loginResponse = await login(username, password)
+
+      // Check if there's an active session conflict
+      if (loginResponse.hasActiveSession && !loginResponse.accessToken) {
+        setActiveSessionModal({
+          username: loginResponse.username,
+          message: loginResponse.message || 'Active session exists in another browser.',
+          password: password
+        })
+        return
+      }
+
+      await handleLoginSuccess(loginResponse)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid credentials. Please try again.')
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleForceLogout = async () => {
+    if (!activeSessionModal) return
+
+    try {
+      setIsLoggingOut(true)
+      // Force logout the existing session
+      await authService.forceLogoutByUsername(activeSessionModal.username)
+
+      // Now try to login again
+      const loginResponse = await login(activeSessionModal.username, activeSessionModal.password)
+      setActiveSessionModal(null)
+
+      await handleLoginSuccess(loginResponse)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to logout. Please try again.')
+      setActiveSessionModal(null)
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
+
+  const handleCancelModal = () => {
+    setActiveSessionModal(null)
   }
 
   return (
@@ -112,11 +193,11 @@ export function LoginForm() {
           </div>
         )}
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="login-form" noValidate>
+        {/* Login Form - name attribute helps browser identify the form for password saving */}
+        <form onSubmit={handleSubmit} className="login-form" name="login" autoComplete="on">
           <div className="form-group">
-            <label htmlFor="email" className="form-label">
-              Email Address
+            <label htmlFor="username" className="form-label">
+              Username
             </label>
             <div className="input-wrapper">
               <svg
@@ -126,14 +207,14 @@ export function LoginForm() {
                 xmlns="http://www.w3.org/2000/svg"
               >
                 <path
-                  d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z"
+                  d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
                   stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
                 <path
-                  d="M22 6L12 13L2 6"
+                  d="M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z"
                   stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
@@ -141,13 +222,13 @@ export function LoginForm() {
                 />
               </svg>
               <input
-                type="email"
-                id="email"
+                ref={usernameRef}
+                type="text"
+                id="username"
+                name="username"
                 className="form-input"
-                placeholder="your.email@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
+                placeholder="Enter your username"
+                autoComplete="username"
                 required
                 disabled={isLoading}
               />
@@ -186,12 +267,12 @@ export function LoginForm() {
                 />
               </svg>
               <input
+                ref={passwordRef}
                 type="password"
                 id="password"
+                name="password"
                 className="form-input"
                 placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
                 required
                 disabled={isLoading}
@@ -199,21 +280,11 @@ export function LoginForm() {
             </div>
           </div>
 
-          {/* Remember Me & Forgot Password */}
+          {/* Forgot Password Link */}
           <div className="form-options">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                className="checkbox-input"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                disabled={isLoading}
-              />
-              <span className="checkbox-text">Remember me</span>
-            </label>
-            <a href="/forgot-password" className="link-text link-text--primary">
+            <Link to={ROUTES.FORGOT_PASSWORD} className="link-text link-text--primary">
               Forgot password?
-            </a>
+            </Link>
           </div>
 
           {/* Submit Button */}
@@ -294,6 +365,60 @@ export function LoginForm() {
           </p>
         </div>
       </div>
+
+      {/* Active Session Modal */}
+      {activeSessionModal && (
+        <div className="session-modal-overlay">
+          <div className="session-modal">
+            <div className="session-modal__icon">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                <path d="M12 8V12M12 16H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </div>
+            <h2 className="session-modal__title">Active Session Detected</h2>
+            <p className="session-modal__message">{activeSessionModal.message}</p>
+            <p className="session-modal__info">
+              Would you like to logout from the other session and continue here?
+            </p>
+            <div className="session-modal__actions">
+              <button
+                type="button"
+                className="session-modal__btn session-modal__btn--cancel"
+                onClick={handleCancelModal}
+                disabled={isLoggingOut}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="session-modal__btn session-modal__btn--logout"
+                onClick={handleForceLogout}
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? (
+                  <>
+                    <svg className="btn-spinner btn-spinner--sm" viewBox="0 0 24 24">
+                      <circle
+                        className="btn-spinner__circle"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        fill="none"
+                      />
+                    </svg>
+                    <span>Logging out...</span>
+                  </>
+                ) : (
+                  'Logout & Continue'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

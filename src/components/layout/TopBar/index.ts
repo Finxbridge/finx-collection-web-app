@@ -3,4 +3,4 @@
  */
 
 export { TopBar } from './TopBar'
-export default TopBar
+export { TopBar as default } from './TopBar'

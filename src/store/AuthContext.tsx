@@ -4,17 +4,17 @@
  */
 
 import { createContext, useState, useEffect, ReactNode } from 'react'
-import { User, AuthUser } from '@types'
+import { User, LoginResponse } from '@types'
 import { authService } from '@services/api'
-import { setToken, removeToken, getStorageItem, setStorageItem } from '@utils'
+import { setToken, removeToken, getStorageItem, setStorageItem, removeStorageItem } from '@utils'
 import config from '@config'
 
 interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (email: string, password: string) => Promise<void>
-  register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>
+  sessionId: string | null
+  login: (username: string, password: string) => Promise<LoginResponse>
   logout: () => Promise<void>
   updateUser: (user: User) => void
 }
@@ -27,6 +27,7 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   // Initialize auth state from localStorage
@@ -34,15 +35,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const initAuth = async () => {
       try {
         const storedUser = getStorageItem<User>(config.storage.userKey)
-        if (storedUser) {
-          // Verify token is still valid by fetching current user
-          const currentUser = await authService.getCurrentUser()
-          setUser(currentUser)
-          setStorageItem(config.storage.userKey, currentUser)
+        const storedSessionId = localStorage.getItem(config.storage.sessionIdKey)
+        const token = localStorage.getItem(config.storage.tokenKey)
+
+        if (storedUser && storedSessionId && token) {
+          // First restore from storage to avoid flash of unauthenticated state
+          setUser(storedUser)
+          setSessionId(storedSessionId)
+
+          // Optionally verify token is still valid by fetching current user
+          // Only update if successful, don't logout on failure
+          try {
+            const currentUser = await authService.getCurrentUser()
+            setUser(currentUser)
+            setStorageItem(config.storage.userKey, currentUser)
+          } catch (verifyError) {
+            // Token might be expired but could be refreshed by interceptor
+            // Keep user logged in with stored data
+            console.warn('Token verification failed, using stored user data:', verifyError)
+          }
         }
       } catch (error) {
         console.error('Auth initialization failed:', error)
         removeToken()
+        localStorage.removeItem(config.storage.sessionIdKey)
+        removeStorageItem(config.storage.userKey)
+        setUser(null)
+        setSessionId(null)
       } finally {
         setIsLoading(false)
       }
@@ -51,39 +70,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
     initAuth()
   }, [])
 
-  const login = async (email: string, password: string) => {
+  const login = async (username: string, password: string): Promise<LoginResponse> => {
     try {
       setIsLoading(true)
-      const authUser: AuthUser = await authService.login({ email, password })
+      const loginResponse: LoginResponse = await authService.login({ username, password })
 
-      setToken(authUser.accessToken)
-      localStorage.setItem(config.storage.refreshTokenKey, authUser.refreshToken)
-      setStorageItem(config.storage.userKey, authUser.user)
-      setUser(authUser.user)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+      // Store tokens
+      setToken(loginResponse.accessToken)
+      localStorage.setItem(config.storage.refreshTokenKey, loginResponse.refreshToken)
+      localStorage.setItem(config.storage.sessionIdKey, loginResponse.sessionId)
 
-  const register = async (
-    email: string,
-    password: string,
-    firstName: string,
-    lastName: string
-  ) => {
-    try {
-      setIsLoading(true)
-      const authUser: AuthUser = await authService.register({
-        email,
-        password,
-        firstName,
-        lastName,
-      })
+      // Map LoginResponse to User object
+      const userData: User = {
+        id: loginResponse.userId,
+        username: loginResponse.username,
+        email: loginResponse.email,
+        firstName: loginResponse.firstName,
+        lastName: loginResponse.lastName,
+        status: 'ACTIVE',
+        role: loginResponse.role,
+      }
 
-      setToken(authUser.accessToken)
-      localStorage.setItem(config.storage.refreshTokenKey, authUser.refreshToken)
-      setStorageItem(config.storage.userKey, authUser.user)
-      setUser(authUser.user)
+      setStorageItem(config.storage.userKey, userData)
+      setUser(userData)
+      setSessionId(loginResponse.sessionId)
+
+      return loginResponse
     } finally {
       setIsLoading(false)
     }
@@ -91,12 +103,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = async () => {
     try {
-      await authService.logout()
+      const currentSessionId = sessionId || localStorage.getItem(config.storage.sessionIdKey)
+      if (currentSessionId) {
+        await authService.logout(currentSessionId)
+      }
     } catch (error) {
       console.error('Logout failed:', error)
     } finally {
       removeToken()
+      localStorage.removeItem(config.storage.refreshTokenKey)
+      localStorage.removeItem(config.storage.sessionIdKey)
+      removeStorageItem(config.storage.userKey)
       setUser(null)
+      setSessionId(null)
     }
   }
 
@@ -109,8 +128,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user,
     isAuthenticated: !!user,
     isLoading,
+    sessionId,
     login,
-    register,
     logout,
     updateUser,
   }
