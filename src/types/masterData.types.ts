@@ -17,7 +17,14 @@ export interface MasterData {
   updatedAt: string
 }
 
-// Request to create/update master data
+// Request to update master data (matches PUT /master-data/{id})
+export interface MasterDataUpdateRequest {
+  value: string
+  displayOrder?: number
+  isActive?: boolean
+}
+
+// Legacy request type (for backwards compatibility in forms)
 export interface MasterDataRequest {
   dataType: string
   code: string
@@ -26,6 +33,27 @@ export interface MasterDataRequest {
   displayOrder?: number
   isActive?: boolean
   metadata?: Record<string, unknown> | null
+}
+
+// Request to create master data (matches POST /master-data/create)
+export interface MasterDataCreateRequest {
+  categoryType: string
+  code: string
+  value: string
+  displayOrder?: number
+  isActive?: boolean
+}
+
+// Category summary from GET /master-data/all
+export interface MasterDataCategory {
+  categoryName: string
+  count: number
+  status: 'ACTIVE' | 'INACTIVE'
+}
+
+// Response from GET /master-data/all
+export interface MasterDataAllResponse {
+  categories: MasterDataCategory[]
 }
 
 // Bulk upload response

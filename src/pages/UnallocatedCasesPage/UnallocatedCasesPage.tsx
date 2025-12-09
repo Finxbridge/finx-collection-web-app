@@ -3,10 +3,10 @@
  * View and manage cases pending allocation
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { caseSourcingService } from '@services/api'
-import { Table, Pagination, Column } from '@components/common/Table'
+import { Table, Column } from '@components/common/Table'
 import type { UnallocatedCaseSummary } from '@types'
 import './UnallocatedCasesPage.css'
 
@@ -15,32 +15,28 @@ export function UnallocatedCasesPage() {
   const [cases, setCases] = useState<UnallocatedCaseSummary[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
-
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
   const [totalElements, setTotalElements] = useState(0)
-  const pageSize = 20
-
-  const fetchCases = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      setError('')
-
-      const response = await caseSourcingService.getUnallocatedCases(currentPage, pageSize)
-      setCases(response.content)
-      setTotalPages(response.totalPages)
-      setTotalElements(response.totalElements)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch unallocated cases')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [currentPage])
 
   useEffect(() => {
+    const fetchCases = async () => {
+      try {
+        setIsLoading(true)
+        setError('')
+
+        const response = await caseSourcingService.getUnallocatedCases()
+        setCases(response.content || [])
+        setTotalElements(response.totalElements || 0)
+      } catch (err: unknown) {
+        const errorObj = err as { message?: string; statusCode?: number }
+        const errorMessage = errorObj?.message || 'Failed to fetch unallocated cases'
+        setError(errorMessage)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
     fetchCases()
-  }, [fetchCases])
+  }, [])
 
   const handleViewCase = (caseItem: UnallocatedCaseSummary) => {
     navigate(`/case-sourcing/unallocated/${caseItem.id}`)
@@ -66,7 +62,8 @@ export function UnallocatedCasesPage() {
     return new Intl.NumberFormat().format(num)
   }
 
-  const getBucketBadgeClass = (bucket: string): string => {
+  const getBucketBadgeClass = (bucket: string | null): string => {
+    if (!bucket) return 'bucket-badge--default'
     if (bucket.includes('90')) return 'bucket-badge--danger'
     if (bucket.includes('60')) return 'bucket-badge--warning'
     if (bucket.includes('30')) return 'bucket-badge--info'
@@ -95,13 +92,6 @@ export function UnallocatedCasesPage() {
       ),
     },
     {
-      key: 'loanAccountNumber',
-      header: 'Loan Account',
-      render: (caseItem) => (
-        <span className="loan-account">{caseItem.loanDetails.loanAccountNumber}</span>
-      ),
-    },
-    {
       key: 'outstanding',
       header: 'Outstanding',
       render: (caseItem) => (
@@ -122,8 +112,15 @@ export function UnallocatedCasesPage() {
       header: 'Bucket',
       render: (caseItem) => (
         <span className={`bucket-badge ${getBucketBadgeClass(caseItem.loanDetails.bucket)}`}>
-          {caseItem.loanDetails.bucket}
+          {caseItem.loanDetails.bucket || '-'}
         </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (caseItem) => (
+        <span className="status-badge status-badge--warning">{caseItem.status}</span>
       ),
     },
     {
@@ -191,16 +188,6 @@ export function UnallocatedCasesPage() {
         />
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={totalElements}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-        />
-      )}
     </div>
   )
 }
