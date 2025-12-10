@@ -175,10 +175,10 @@ export interface UnallocatedCaseDetail {
   id: number
   caseNumber: string
   externalCaseId: string
-  customer: CustomerDetail
-  loanDetails: LoanDetailsDetail
+  customer: CustomerSummary
+  loanDetails: LoanDetailsSummary
   status: CaseStatus
-  geographyCode: string
+  geographyCode?: string
   createdAt: string
 }
 

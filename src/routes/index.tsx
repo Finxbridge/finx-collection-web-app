@@ -22,6 +22,7 @@ import {
   CaseUploadPage,
   BatchDetailPage,
   UnallocatedCasesPage,
+  UnallocatedCaseDetailPage,
   CaseSearchPage,
   CaseDetailPage,
   StrategyEnginePage,
@@ -73,6 +74,7 @@ export function AppRoutes() {
         <Route path={ROUTES.CASE_SOURCING_UPLOAD} element={<CaseUploadPage />} />
         <Route path={ROUTES.CASE_SOURCING_BATCH_DETAIL} element={<BatchDetailPage />} />
         <Route path={ROUTES.CASE_SOURCING_UNALLOCATED} element={<UnallocatedCasesPage />} />
+        <Route path={ROUTES.CASE_SOURCING_UNALLOCATED_DETAIL} element={<UnallocatedCaseDetailPage />} />
         <Route path={ROUTES.CASE_SOURCING_SEARCH} element={<CaseSearchPage />} />
         <Route path={ROUTES.CASE_SOURCING_CASE_DETAIL} element={<CaseDetailPage />} />
 

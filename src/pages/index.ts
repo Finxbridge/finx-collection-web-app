@@ -26,6 +26,7 @@ export { MasterDataPage } from './MasterDataPage/MasterDataPage'
 export { CaseUploadPage } from './CaseUploadPage/CaseUploadPage'
 export { BatchDetailPage } from './BatchDetailPage/BatchDetailPage'
 export { UnallocatedCasesPage } from './UnallocatedCasesPage/UnallocatedCasesPage'
+export { UnallocatedCaseDetailPage } from './UnallocatedCaseDetailPage/UnallocatedCaseDetailPage'
 export { CaseSearchPage } from './CaseSearchPage/CaseSearchPage'
 export { CaseDetailPage } from './CaseDetailPage/CaseDetailPage'
 

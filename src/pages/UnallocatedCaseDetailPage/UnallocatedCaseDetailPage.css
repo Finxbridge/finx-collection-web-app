@@ -1,0 +1,241 @@
+/**
+ * Unallocated Case Detail Page Styles
+ */
+
+.unallocated-detail-page {
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Loading State */
+.unallocated-detail-page__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  gap: 1rem;
+  color: var(--text-secondary);
+}
+
+/* Error State */
+.unallocated-detail-page__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  gap: 1rem;
+  text-align: center;
+}
+
+.unallocated-detail-page__error p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+/* Header */
+.unallocated-detail-page__header {
+  margin-bottom: 1.5rem;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: color 0.2s;
+  margin-bottom: 1rem;
+}
+
+.back-button:hover {
+  color: var(--primary);
+}
+
+.back-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.unallocated-detail-page__header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.unallocated-detail-page__title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.unallocated-detail-page__subtitle {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0.25rem 0 0;
+}
+
+.unallocated-detail-page__status {
+  display: flex;
+  align-items: center;
+}
+
+/* Content */
+.unallocated-detail-page__content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Detail Card */
+.detail-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.detail-card__title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.detail-card__title svg {
+  width: 20px;
+  height: 20px;
+  color: var(--primary);
+}
+
+.detail-card__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
+}
+
+/* Detail Item */
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.detail-item--highlight {
+  background: var(--bg-secondary);
+  padding: 1rem;
+  border-radius: 6px;
+  grid-column: span 1;
+}
+
+.detail-item__label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail-item__value {
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.detail-item__value--large {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.status-badge--warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+}
+
+.status-badge--success {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.status-badge--danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+/* Alert */
+.alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.alert--error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.alert button {
+  background: none;
+  border: none;
+  font-size: 0.875rem;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.alert button:hover {
+  opacity: 1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .unallocated-detail-page {
+    padding: 1rem;
+  }
+
+  .unallocated-detail-page__header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .unallocated-detail-page__title {
+    font-size: 1.5rem;
+  }
+
+  .detail-card {
+    padding: 1rem;
+  }
+
+  .detail-card__grid {
+    grid-template-columns: 1fr;
+  }
+}
