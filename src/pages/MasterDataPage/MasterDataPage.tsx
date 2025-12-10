@@ -8,29 +8,22 @@ import { masterDataService } from '@services/api'
 import { Table, Column } from '@components/common/Table'
 import { Modal } from '@components/common/Modal'
 import { Button } from '@components/common/Button'
-import type { MasterData, MasterDataRequest, BulkUploadResult, BulkUploadError } from '@types'
+import type { MasterData, MasterDataRequest, MasterDataCategory, BulkUploadResult, BulkUploadError } from '@types'
 import './MasterDataPage.css'
 
-// Type for category configuration
-interface CategoryConfig {
-  code: string
+// Extended category config for display
+interface CategoryDisplay extends MasterDataCategory {
   label: string
   description: string
 }
-
-// Default master data types - these can be extended by user
-const DEFAULT_CATEGORIES: CategoryConfig[] = [
-  { code: 'BANK', label: 'Bank', description: 'Bank master data for financial institutions' },
-  { code: 'LANGUAGE', label: 'Language', description: 'Supported languages for communication' },
-  { code: 'DPD', label: 'DPD', description: 'Days Past Due buckets for loan classification' },
-]
 
 export function MasterDataPage() {
   // View state - null means landing page, string means detail view
   const [selectedType, setSelectedType] = useState<string | null>(null)
 
   // Categories state
-  const [categories, setCategories] = useState<CategoryConfig[]>(DEFAULT_CATEGORIES)
+  const [categories, setCategories] = useState<CategoryDisplay[]>([])
+  const [isCategoriesLoading, setIsCategoriesLoading] = useState(true)
 
   const [masterData, setMasterData] = useState<MasterData[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -63,7 +56,7 @@ export function MasterDataPage() {
   const [metadataString, setMetadataString] = useState('')
 
   // Form state for add category
-  const [newCategory, setNewCategory] = useState<CategoryConfig>({
+  const [newCategory, setNewCategory] = useState({
     code: '',
     label: '',
     description: '',
@@ -85,22 +78,21 @@ export function MasterDataPage() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const apiCategories = await masterDataService.getCategories()
-        if (apiCategories && apiCategories.length > 0) {
-          // Merge API categories with defaults
-          const mergedCategories = apiCategories.map(code => {
-            const existing = DEFAULT_CATEGORIES.find(c => c.code === code)
-            return existing || {
-              code,
-              label: code.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-              description: `${code} master data`,
-            }
-          })
-          setCategories(mergedCategories)
+        setIsCategoriesLoading(true)
+        const response = await masterDataService.getAllCategories()
+        if (response && response.categories && response.categories.length > 0) {
+          // Map API categories to display format
+          const displayCategories: CategoryDisplay[] = response.categories.map(cat => ({
+            ...cat,
+            label: cat.categoryName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            description: `${cat.count} ${cat.count === 1 ? 'entry' : 'entries'} - ${cat.status}`,
+          }))
+          setCategories(displayCategories)
         }
-      } catch {
-        // If API fails, use default categories
-        setCategories(DEFAULT_CATEGORIES)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch categories')
+      } finally {
+        setIsCategoriesLoading(false)
       }
     }
     fetchCategories()
@@ -168,20 +160,11 @@ export function MasterDataPage() {
       setIsSubmitting(true)
       setError('')
 
-      // Parse metadata if provided
-      let metadata: Record<string, unknown> | null = null
-      if (metadataString.trim()) {
-        try {
-          metadata = JSON.parse(metadataString)
-        } catch {
-          setError('Invalid JSON format for metadata')
-          return
-        }
-      }
-
+      // Update only sends value, displayOrder, and isActive
       await masterDataService.update(selectedItem.id, {
-        ...formData,
-        metadata,
+        value: formData.value,
+        displayOrder: formData.displayOrder,
+        isActive: formData.isActive,
       })
 
       setIsEditModalOpen(false)
@@ -220,8 +203,10 @@ export function MasterDataPage() {
       return
     }
 
+    const categoryName = newCategory.code.toUpperCase().replace(/\s+/g, '_')
+
     // Check if category already exists
-    if (categories.some(c => c.code === newCategory.code.toUpperCase())) {
+    if (categories.some(c => c.categoryName === categoryName)) {
       setError('Category with this code already exists')
       return
     }
@@ -230,18 +215,29 @@ export function MasterDataPage() {
       setIsSubmitting(true)
       setError('')
 
-      const categoryToAdd: CategoryConfig = {
-        code: newCategory.code.toUpperCase().replace(/\s+/g, '_'),
-        label: newCategory.label,
-        description: newCategory.description || `${newCategory.label} master data`,
-      }
+      // Create first entry for this new category via API
+      await masterDataService.create({
+        categoryType: categoryName,
+        code: 'DEFAULT',
+        value: newCategory.label,
+        displayOrder: 1,
+        isActive: true,
+      })
 
-      // Add to local state
-      setCategories(prev => [...prev, categoryToAdd])
+      // Refresh categories list
+      const response = await masterDataService.getAllCategories()
+      if (response && response.categories) {
+        const displayCategories: CategoryDisplay[] = response.categories.map(cat => ({
+          ...cat,
+          label: cat.categoryName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          description: `${cat.count} ${cat.count === 1 ? 'entry' : 'entries'} - ${cat.status}`,
+        }))
+        setCategories(displayCategories)
+      }
 
       setIsAddCategoryModalOpen(false)
       setNewCategory({ code: '', label: '', description: '' })
-      setSuccessMessage(`Category "${categoryToAdd.label}" added successfully`)
+      setSuccessMessage(`Category "${newCategory.label}" added successfully`)
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add category')
@@ -260,21 +256,12 @@ export function MasterDataPage() {
       setIsSubmitting(true)
       setError('')
 
-      // Parse metadata if provided
-      let metadata: Record<string, unknown> | null = null
-      if (newAttributeMetadata.trim()) {
-        try {
-          metadata = JSON.parse(newAttributeMetadata)
-        } catch {
-          setError('Invalid JSON format for metadata')
-          return
-        }
-      }
-
       await masterDataService.create({
-        ...newAttribute,
-        dataType: selectedType!,
-        metadata,
+        categoryType: selectedType!,
+        code: newAttribute.code,
+        value: newAttribute.value,
+        displayOrder: newAttribute.displayOrder || 1,
+        isActive: newAttribute.isActive ?? true,
       })
 
       setIsAddAttributeModalOpen(false)
@@ -302,11 +289,11 @@ export function MasterDataPage() {
 
       let result: BulkUploadResult
       if (selectedType) {
-        // Inside a data type - use V1 (type as parameter)
-        result = await masterDataService.bulkUploadV1(selectedType, uploadFile)
+        // Inside a data type - use bulk upload by type (type as query parameter)
+        result = await masterDataService.bulkUploadByType(selectedType, uploadFile)
       } else {
-        // Landing page - use V2 (type in CSV column)
-        result = await masterDataService.bulkUploadV2(uploadFile)
+        // Landing page - use bulk upload (type in CSV column)
+        result = await masterDataService.bulkUpload(uploadFile)
       }
 
       setUploadResult(result)
@@ -378,9 +365,9 @@ export function MasterDataPage() {
     setNewAttributeMetadata('')
   }
 
-  const getTypeLabel = (code: string) => {
-    const type = categories.find(t => t.code === code)
-    return type?.label || code.replace(/_/g, ' ')
+  const getTypeLabel = (categoryName: string) => {
+    const type = categories.find(t => t.categoryName === categoryName)
+    return type?.label || categoryName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
   }
 
   const columns: Column<MasterData>[] = [
@@ -591,56 +578,73 @@ export function MasterDataPage() {
         )}
 
         {/* Data Types Grid */}
-        <div className="data-types-grid">
-          {categories.map((type) => (
-            <div
-              key={type.code}
-              className="data-type-card"
-              onClick={() => handleTypeClick(type.code)}
-            >
-              <div className="data-type-card__icon">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path
-                    d="M4 7V4H20V7"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M9 20H15"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M12 4V20"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+        {isCategoriesLoading ? (
+          <div className="loading-container">
+            <div className="spinner"></div>
+            <span>Loading categories...</span>
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="empty-state">
+            <p>No categories found. Click "Add Category" to create one.</p>
+          </div>
+        ) : (
+          <div className="data-types-grid">
+            {categories.map((type) => (
+              <div
+                key={type.categoryName}
+                className="data-type-card"
+                onClick={() => handleTypeClick(type.categoryName)}
+              >
+                <div className="data-type-card__icon">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M4 7V4H20V7"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M9 20H15"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M12 4V20"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
+                <div className="data-type-card__content">
+                  <h3 className="data-type-card__title">{type.label}</h3>
+                  <p className="data-type-card__description">{type.description}</p>
+                  <span className={`status-badge status-badge--${type.status === 'ACTIVE' ? 'active' : 'inactive'}`}>
+                    {type.status}
+                  </span>
+                </div>
+                <div className="data-type-card__meta">
+                  <span className="data-type-card__count">{type.count}</span>
+                </div>
+                <div className="data-type-card__arrow">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M9 18L15 12L9 6"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
               </div>
-              <div className="data-type-card__content">
-                <h3 className="data-type-card__title">{type.label}</h3>
-                <p className="data-type-card__description">{type.description}</p>
-              </div>
-              <div className="data-type-card__arrow">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path
-                    d="M9 18L15 12L9 6"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Add Category Modal */}
         <Modal

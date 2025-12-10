@@ -75,16 +75,9 @@ export const authService = {
   },
 
   /**
-   * Logout current user
+   * Logout user by username
    */
-  async logout(sessionId: string): Promise<void> {
-    await apiClient.post(`${API_ENDPOINTS.AUTH.LOGOUT}?sessionId=${sessionId}`)
-  },
-
-  /**
-   * Force logout user by username (for active session conflicts)
-   */
-  async forceLogoutByUsername(username: string): Promise<void> {
+  async logout(username: string): Promise<void> {
     const encodedUsername = encodeURIComponent(username)
     await apiClient.post(`${API_ENDPOINTS.AUTH.LOGOUT}?username=${encodedUsername}`)
   },

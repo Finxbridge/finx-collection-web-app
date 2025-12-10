@@ -143,10 +143,10 @@ export interface CustomerDetail {
 // ===================
 
 export interface LoanDetailsSummary {
-  loanAccountNumber: string
+  loanAccountNumber?: string
   totalOutstanding: number
   dpd: number
-  bucket: string
+  bucket: string | null
 }
 
 export interface LoanDetailsDetail {
@@ -175,10 +175,10 @@ export interface UnallocatedCaseDetail {
   id: number
   caseNumber: string
   externalCaseId: string
-  customer: CustomerDetail
-  loanDetails: LoanDetailsDetail
+  customer: CustomerSummary
+  loanDetails: LoanDetailsSummary
   status: CaseStatus
-  geographyCode: string
+  geographyCode?: string
   createdAt: string
 }
 
