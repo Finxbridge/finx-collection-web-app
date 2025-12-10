@@ -89,16 +89,13 @@ export const API_ENDPOINTS = {
   // Master Data endpoints
   MASTER_DATA: {
     LIST: '/master-data',
-    GET_ALL: '/master-data/all',
     GET_BY_TYPE: '/master-data',
-    CREATE: '/master-data/create',
+    CREATE: '/master-data',
     UPDATE: (id: number) => `/master-data/${id}`,
     DELETE: (id: number) => `/master-data/${id}`,
-    DELETE_BY_TYPE: (type: string) => `/master-data/type/${type}`,
-    BULK_UPLOAD_BY_TYPE: '/master-data/bulk-upload-by-type',
-    BULK_UPLOAD: '/master-data/bulk-upload',
-    TEMPLATE: '/master-data/upload/template',
-    TEMPLATE_V2: '/master-data/upload/template-v2',
+    BULK_UPLOAD_V1: '/master-data/bulk-upload',
+    BULK_UPLOAD_V2: '/master-data/bulk-upload-v2',
+    TEMPLATE: '/master-data/template',
     CATEGORIES: '/master-data/categories',
   },
   // Case Sourcing endpoints

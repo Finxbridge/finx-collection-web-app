@@ -106,8 +106,8 @@ export function LoginForm() {
 
     try {
       setIsLoggingOut(true)
-      // Force logout the existing session using username
-      await authService.logout(activeSessionModal.username)
+      // Force logout the existing session
+      await authService.forceLogoutByUsername(activeSessionModal.username)
 
       // Now try to login again
       const loginResponse = await login(activeSessionModal.username, activeSessionModal.password)
