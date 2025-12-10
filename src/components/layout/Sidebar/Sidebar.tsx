@@ -19,7 +19,7 @@ interface MenuItem {
 export function Sidebar() {
   const location = useLocation()
   const { user } = useAuth()
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(['access-management', 'case-sourcing'])
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(['access-management', 'case-sourcing', 'strategy-engine', 'allocation'])
 
   const toggleMenu = (menuId: string) => {
     setExpandedMenus((prev) =>
@@ -412,8 +412,170 @@ export function Sidebar() {
     ],
   }
 
+  // Strategy Engine submenu
+  const strategyEngineMenu = {
+    id: 'strategy-engine',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M12 2L2 7L12 12L22 7L12 2Z"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M2 17L12 22L22 17"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M2 12L12 17L22 12"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    ),
+    label: 'Strategy Engine',
+    children: [
+      {
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ),
+        label: 'Rules',
+        path: ROUTES.STRATEGY_ENGINE,
+      },
+      {
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M14 2V8H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M16 13H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M16 17H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ),
+        label: 'Execution Logs',
+        path: ROUTES.STRATEGY_ENGINE_LOGS,
+      },
+    ],
+  }
+
+  // Allocation submenu
+  const allocationMenu = {
+    id: 'allocation',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M16 21V5C16 4.46957 15.7893 3.96086 15.4142 3.58579C15.0391 3.21071 14.5304 3 14 3H10C9.46957 3 8.96086 3.21071 8.58579 3.58579C8.21071 3.96086 8 4.46957 8 5V21"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M4 21V10C4 9.46957 4.21071 8.96086 4.58579 8.58579C4.96086 8.21071 5.46957 8 6 8H8"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M20 21V10C20 9.46957 19.7893 8.96086 19.4142 8.58579C19.0391 8.21071 18.5304 8 18 8H16"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path d="M1 21H23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    label: 'Allocation',
+    children: [
+      {
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ),
+        label: 'Dashboard',
+        path: ROUTES.ALLOCATION,
+      },
+      {
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points="17 8 12 3 7 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ),
+        label: 'Upload',
+        path: ROUTES.ALLOCATION_UPLOAD,
+      },
+      {
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ),
+        label: 'Rules',
+        path: ROUTES.ALLOCATION_RULES,
+      },
+      {
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" />
+          </svg>
+        ),
+        label: 'Agent Workload',
+        path: ROUTES.ALLOCATION_WORKLOAD,
+      },
+      {
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <polyline points="17 1 21 5 17 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M3 11V9C3 7.93913 3.42143 6.92172 4.17157 6.17157C4.92172 5.42143 5.93913 5 7 5H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points="7 23 3 19 7 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M21 13V15C21 16.0609 20.5786 17.0783 19.8284 17.8284C19.0783 18.5786 18.0609 19 17 19H3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ),
+        label: 'Reallocation',
+        path: ROUTES.ALLOCATION_REALLOCATION,
+      },
+      {
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M14 2V8H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ),
+        label: 'Batches',
+        path: ROUTES.ALLOCATION_BATCHES,
+      },
+      {
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+            <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        ),
+        label: 'Failure Analysis',
+        path: ROUTES.ALLOCATION_FAILURE_ANALYSIS,
+      },
+    ],
+  }
+
   const isAccessManagementActive = location.pathname.startsWith('/access-management')
   const isCaseSourcingActive = location.pathname.startsWith('/case-sourcing')
+  const isStrategyEngineActive = location.pathname.startsWith('/strategy-engine')
+  const isAllocationActive = location.pathname.startsWith('/allocation')
 
   return (
     <aside className="sidebar">
@@ -543,6 +705,100 @@ export function Sidebar() {
           {expandedMenus.includes(caseSourcingMenu.id) && (
             <div className="sidebar__submenu-items">
               {caseSourcingMenu.children.map((child) => (
+                <NavLink
+                  key={child.path}
+                  to={child.path}
+                  className={({ isActive }) =>
+                    `sidebar__nav-item sidebar__nav-item--child ${
+                      isActive ? 'sidebar__nav-item--active' : ''
+                    }`
+                  }
+                >
+                  <span className="sidebar__nav-icon">{child.icon}</span>
+                  <span className="sidebar__nav-label">{child.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Strategy Engine submenu */}
+        <div className="sidebar__submenu">
+          <button
+            className={`sidebar__nav-item sidebar__nav-item--parent ${
+              isStrategyEngineActive ? 'sidebar__nav-item--active' : ''
+            }`}
+            onClick={() => toggleMenu(strategyEngineMenu.id)}
+          >
+            <span className="sidebar__nav-icon">{strategyEngineMenu.icon}</span>
+            <span className="sidebar__nav-label">{strategyEngineMenu.label}</span>
+            <svg
+              className={`sidebar__nav-arrow ${
+                expandedMenus.includes(strategyEngineMenu.id) ? 'sidebar__nav-arrow--expanded' : ''
+              }`}
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M6 9L12 15L18 9"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+          {expandedMenus.includes(strategyEngineMenu.id) && (
+            <div className="sidebar__submenu-items">
+              {strategyEngineMenu.children.map((child) => (
+                <NavLink
+                  key={child.path}
+                  to={child.path}
+                  className={({ isActive }) =>
+                    `sidebar__nav-item sidebar__nav-item--child ${
+                      isActive ? 'sidebar__nav-item--active' : ''
+                    }`
+                  }
+                >
+                  <span className="sidebar__nav-icon">{child.icon}</span>
+                  <span className="sidebar__nav-label">{child.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Allocation submenu */}
+        <div className="sidebar__submenu">
+          <button
+            className={`sidebar__nav-item sidebar__nav-item--parent ${
+              isAllocationActive ? 'sidebar__nav-item--active' : ''
+            }`}
+            onClick={() => toggleMenu(allocationMenu.id)}
+          >
+            <span className="sidebar__nav-icon">{allocationMenu.icon}</span>
+            <span className="sidebar__nav-label">{allocationMenu.label}</span>
+            <svg
+              className={`sidebar__nav-arrow ${
+                expandedMenus.includes(allocationMenu.id) ? 'sidebar__nav-arrow--expanded' : ''
+              }`}
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M6 9L12 15L18 9"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+          {expandedMenus.includes(allocationMenu.id) && (
+            <div className="sidebar__submenu-items">
+              {allocationMenu.children.map((child) => (
                 <NavLink
                   key={child.path}
                   to={child.path}

@@ -24,6 +24,15 @@ import {
   UnallocatedCasesPage,
   CaseSearchPage,
   CaseDetailPage,
+  StrategyEnginePage,
+  ExecutionLogsPage,
+  AllocationPage,
+  AllocationUploadPage,
+  AllocationRulesPage,
+  AgentWorkloadPage,
+  ReallocationPage,
+  AllocationBatchesPage,
+  FailureAnalysisPage,
 } from '@pages'
 import { ProtectedRoute } from './ProtectedRoute'
 import { ROUTES } from '@config/constants'
@@ -66,6 +75,19 @@ export function AppRoutes() {
         <Route path={ROUTES.CASE_SOURCING_UNALLOCATED} element={<UnallocatedCasesPage />} />
         <Route path={ROUTES.CASE_SOURCING_SEARCH} element={<CaseSearchPage />} />
         <Route path={ROUTES.CASE_SOURCING_CASE_DETAIL} element={<CaseDetailPage />} />
+
+        {/* Strategy Engine routes */}
+        <Route path={ROUTES.STRATEGY_ENGINE} element={<StrategyEnginePage />} />
+        <Route path={ROUTES.STRATEGY_ENGINE_LOGS} element={<ExecutionLogsPage />} />
+
+        {/* Allocation routes */}
+        <Route path={ROUTES.ALLOCATION} element={<AllocationPage />} />
+        <Route path={ROUTES.ALLOCATION_UPLOAD} element={<AllocationUploadPage />} />
+        <Route path={ROUTES.ALLOCATION_RULES} element={<AllocationRulesPage />} />
+        <Route path={ROUTES.ALLOCATION_WORKLOAD} element={<AgentWorkloadPage />} />
+        <Route path={ROUTES.ALLOCATION_REALLOCATION} element={<ReallocationPage />} />
+        <Route path={ROUTES.ALLOCATION_BATCHES} element={<AllocationBatchesPage />} />
+        <Route path={ROUTES.ALLOCATION_FAILURE_ANALYSIS} element={<FailureAnalysisPage />} />
       </Route>
 
       {/* 404 Not Found */}

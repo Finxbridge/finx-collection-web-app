@@ -32,6 +32,17 @@ export const ROUTES = {
   CASE_SOURCING_SEARCH: '/case-sourcing/search',
   CASE_SOURCING_CASE_DETAIL: '/case-sourcing/cases/:caseId',
   CASE_SOURCING_REPORTS: '/case-sourcing/reports',
+  // Strategy Engine Routes
+  STRATEGY_ENGINE: '/strategy-engine',
+  STRATEGY_ENGINE_LOGS: '/strategy-engine/logs',
+  // Allocation Routes
+  ALLOCATION: '/allocation',
+  ALLOCATION_UPLOAD: '/allocation/upload',
+  ALLOCATION_RULES: '/allocation/rules',
+  ALLOCATION_WORKLOAD: '/allocation/workload',
+  ALLOCATION_REALLOCATION: '/allocation/reallocation',
+  ALLOCATION_BATCHES: '/allocation/batches',
+  ALLOCATION_FAILURE_ANALYSIS: '/allocation/failure-analysis',
   NOT_FOUND: '*',
 } as const
 

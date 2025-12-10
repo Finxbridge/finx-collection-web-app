@@ -11,6 +11,12 @@ import {
 } from './management.service'
 import { masterDataService as masterDataServiceImport } from './masterData.service'
 import { caseSourcingService as caseSourcingServiceImport } from './caseSourcing.service'
+import { strategyEngineService as strategyEngineServiceImport } from './strategyEngine.service'
+import {
+  allocationService as allocationServiceImport,
+  reallocationService as reallocationServiceImport,
+  failureAnalysisService as failureAnalysisServiceImport,
+} from './allocation.service'
 
 export { apiClient } from './axios.config'
 export { authService } from './auth.service'
@@ -22,6 +28,12 @@ export {
 } from './management.service'
 export { masterDataService } from './masterData.service'
 export { caseSourcingService } from './caseSourcing.service'
+export { strategyEngineService } from './strategyEngine.service'
+export {
+  allocationService,
+  reallocationService,
+  failureAnalysisService,
+} from './allocation.service'
 
 // Export a combined API object for convenient access
 export const api = {
@@ -34,6 +46,10 @@ export const api = {
   },
   masterData: masterDataServiceImport,
   caseSourcing: caseSourcingServiceImport,
+  strategyEngine: strategyEngineServiceImport,
+  allocation: allocationServiceImport,
+  reallocation: reallocationServiceImport,
+  failureAnalysis: failureAnalysisServiceImport,
 }
 
 export default api

@@ -98,7 +98,7 @@ export function UnallocatedCasesPage() {
       key: 'loanAccountNumber',
       header: 'Loan Account',
       render: (caseItem) => (
-        <span className="loan-account">{caseItem.loanDetails.loanAccountNumber}</span>
+        <span className="loan-account">{caseItem.loanDetails.loanAccountNumber || '-'}</span>
       ),
     },
     {
@@ -121,8 +121,8 @@ export function UnallocatedCasesPage() {
       key: 'bucket',
       header: 'Bucket',
       render: (caseItem) => (
-        <span className={`bucket-badge ${getBucketBadgeClass(caseItem.loanDetails.bucket)}`}>
-          {caseItem.loanDetails.bucket}
+        <span className={`bucket-badge ${getBucketBadgeClass(caseItem.loanDetails.bucket || '')}`}>
+          {caseItem.loanDetails.bucket || '-'}
         </span>
       ),
     },
