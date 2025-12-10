@@ -92,7 +92,6 @@ export function UnallocatedCasesPage() {
       ),
     },
     {
-<<<<<<< HEAD
       key: 'loanAccountNumber',
       header: 'Loan Account',
       render: (caseItem) => (
@@ -100,8 +99,6 @@ export function UnallocatedCasesPage() {
       ),
     },
     {
-=======
->>>>>>> b737edae6f31fb0e95c75f25074e17ed165dacf2
       key: 'outstanding',
       header: 'Outstanding',
       render: (caseItem) => (
@@ -121,11 +118,7 @@ export function UnallocatedCasesPage() {
       key: 'bucket',
       header: 'Bucket',
       render: (caseItem) => (
-<<<<<<< HEAD
         <span className={`bucket-badge ${getBucketBadgeClass(caseItem.loanDetails.bucket || '')}`}>
-=======
-        <span className={`bucket-badge ${getBucketBadgeClass(caseItem.loanDetails.bucket)}`}>
->>>>>>> b737edae6f31fb0e95c75f25074e17ed165dacf2
           {caseItem.loanDetails.bucket || '-'}
         </span>
       ),
