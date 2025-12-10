@@ -143,10 +143,10 @@ export interface CustomerDetail {
 // ===================
 
 export interface LoanDetailsSummary {
-  loanAccountNumber: string
+  loanAccountNumber?: string
   totalOutstanding: number
   dpd: number
-  bucket: string
+  bucket: string | null
 }
 
 export interface LoanDetailsDetail {
@@ -184,8 +184,14 @@ export interface UnallocatedCaseDetail {
 
 export interface UnallocatedCasesResponse {
   content: UnallocatedCaseSummary[]
+  number: number
+  size: number
   totalElements: number
+  last: boolean
   totalPages: number
+  first: boolean
+  numberOfElements: number
+  empty: boolean
 }
 
 // ===================

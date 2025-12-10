@@ -285,8 +285,14 @@ export const caseSourcingService = {
     if (isSuccess(response.data.status)) {
       return {
         content: [],
+        number: page,
+        size: size,
         totalElements: 0,
+        last: true,
         totalPages: 0,
+        first: true,
+        numberOfElements: 0,
+        empty: true,
       }
     }
     throw new Error(response.data.message || 'Failed to fetch unallocated cases')

@@ -28,3 +28,16 @@ export { BatchDetailPage } from './BatchDetailPage/BatchDetailPage'
 export { UnallocatedCasesPage } from './UnallocatedCasesPage/UnallocatedCasesPage'
 export { CaseSearchPage } from './CaseSearchPage/CaseSearchPage'
 export { CaseDetailPage } from './CaseDetailPage/CaseDetailPage'
+
+// Strategy Engine pages
+export { StrategyEnginePage } from './StrategyEnginePage/StrategyEnginePage'
+export { ExecutionLogsPage } from './ExecutionLogsPage/ExecutionLogsPage'
+
+// Allocation pages
+export { AllocationPage } from './AllocationPage/AllocationPage'
+export { AllocationUploadPage } from './AllocationUploadPage/AllocationUploadPage'
+export { AllocationRulesPage } from './AllocationRulesPage/AllocationRulesPage'
+export { AgentWorkloadPage } from './AgentWorkloadPage/AgentWorkloadPage'
+export { ReallocationPage } from './ReallocationPage/ReallocationPage'
+export { AllocationBatchesPage } from './AllocationBatchesPage/AllocationBatchesPage'
+export { FailureAnalysisPage } from './FailureAnalysisPage/FailureAnalysisPage'

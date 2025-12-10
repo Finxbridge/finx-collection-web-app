@@ -79,7 +79,6 @@ export function MasterDataPage() {
     isActive: true,
     metadata: null,
   })
-  const [newAttributeMetadata, setNewAttributeMetadata] = useState('')
 
   // Fetch categories from API on mount
   useEffect(() => {
@@ -260,21 +259,14 @@ export function MasterDataPage() {
       setIsSubmitting(true)
       setError('')
 
-      // Parse metadata if provided
-      let metadata: Record<string, unknown> | null = null
-      if (newAttributeMetadata.trim()) {
-        try {
-          metadata = JSON.parse(newAttributeMetadata)
-        } catch {
-          setError('Invalid JSON format for metadata')
-          return
-        }
-      }
-
       await masterDataService.create({
-        ...newAttribute,
         dataType: selectedType!,
-        metadata,
+        code: newAttribute.code,
+        value: newAttribute.value,
+        displayOrder: newAttribute.displayOrder,
+        isActive: newAttribute.isActive,
+        parentCode: null,
+        metadata: null,
       })
 
       setIsAddAttributeModalOpen(false)
@@ -375,7 +367,6 @@ export function MasterDataPage() {
       isActive: true,
       metadata: null,
     })
-    setNewAttributeMetadata('')
   }
 
   const getTypeLabel = (code: string) => {
@@ -1020,18 +1011,6 @@ export function MasterDataPage() {
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Parent Code</label>
-              <input
-                type="text"
-                className="form-input"
-                value={newAttribute.parentCode || ''}
-                onChange={(e) =>
-                  setNewAttribute({ ...newAttribute, parentCode: e.target.value || null })
-                }
-                placeholder="Optional"
-              />
-            </div>
-            <div className="form-group">
               <label className="form-label">Display Order</label>
               <input
                 type="number"
@@ -1043,27 +1022,17 @@ export function MasterDataPage() {
                 min="1"
               />
             </div>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Status</label>
-            <select
-              className="form-input"
-              value={newAttribute.isActive ? 'true' : 'false'}
-              onChange={(e) => setNewAttribute({ ...newAttribute, isActive: e.target.value === 'true' })}
-            >
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Metadata (JSON)</label>
-            <textarea
-              className="form-input form-textarea"
-              value={newAttributeMetadata}
-              onChange={(e) => setNewAttributeMetadata(e.target.value)}
-              placeholder='{"branch": "Mumbai"}'
-              rows={3}
-            />
+            <div className="form-group">
+              <label className="form-label">Status</label>
+              <select
+                className="form-input"
+                value={newAttribute.isActive ? 'true' : 'false'}
+                onChange={(e) => setNewAttribute({ ...newAttribute, isActive: e.target.value === 'true' })}
+              >
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </select>
+            </div>
           </div>
         </form>
       </Modal>

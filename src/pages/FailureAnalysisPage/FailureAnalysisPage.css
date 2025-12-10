@@ -1,0 +1,387 @@
+/**
+ * Failure Analysis Page Styles
+ */
+
+.failure-page {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.failure-header {
+  margin-bottom: 24px;
+}
+
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: 14px;
+  color: #6b7280;
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+
+.btn-back:hover {
+  color: #2563eb;
+}
+
+.btn-back svg {
+  width: 18px;
+  height: 18px;
+}
+
+.failure-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0 0 4px 0;
+}
+
+.failure-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Filters */
+.failure-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.filter-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.filter-group input {
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+.filter-group input:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+/* Stats Grid */
+.failure-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1024px) {
+  .failure-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.failure-stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  border: 1px solid #e5e7eb;
+}
+
+.failure-stat-card--danger {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.failure-stat-card__value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.failure-stat-card--danger .failure-stat-card__value {
+  color: #dc2626;
+}
+
+.failure-stat-card__label {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* Analysis Cards */
+.analysis-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 24px;
+}
+
+.analysis-card h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0 0 16px 0;
+}
+
+.analysis-card h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin: 16px 0 12px 0;
+}
+
+.batch-summary {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 16px;
+}
+
+.batch-summary__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.batch-summary__item span {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.batch-summary__item strong {
+  font-size: 20px;
+  color: #1a1a2e;
+}
+
+.text-danger {
+  color: #dc2626 !important;
+}
+
+/* Reasons List */
+.reasons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reason-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.reason-item__info {
+  min-width: 200px;
+  flex-shrink: 0;
+}
+
+.reason-item__text {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a2e;
+}
+
+.reason-item__count {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.reason-item__bar {
+  flex: 1;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.reason-item__fill {
+  height: 100%;
+  background: #dc2626;
+  border-radius: 4px;
+}
+
+.reason-item__percentage {
+  min-width: 48px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  text-align: right;
+}
+
+/* Analysis Grid */
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .analysis-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Error Types */
+.error-types-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.error-type-item {
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.error-type-item__count {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.error-type-item__label {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* Field Failures */
+.field-failures-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field-failure-item {
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.field-failure-item__header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.field-failure-item__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+  font-family: monospace;
+}
+
+.field-failure-item__count {
+  font-size: 13px;
+  color: #dc2626;
+}
+
+.field-failure-item__errors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.error-tag {
+  padding: 4px 8px;
+  font-size: 11px;
+  background: #fee2e2;
+  color: #dc2626;
+  border-radius: 4px;
+}
+
+.empty-text {
+  font-size: 14px;
+  color: #6b7280;
+  text-align: center;
+  padding: 24px 0;
+}
+
+/* Buttons */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  background: #2563eb;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+
+/* Alert */
+.alert {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.alert--error {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.alert button {
+  padding: 4px 12px;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  cursor: pointer;
+  color: inherit;
+}
+
+/* Loading */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-height: 200px;
+  justify-content: center;
+  color: #6b7280;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
