@@ -103,9 +103,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = async () => {
     try {
-      const currentUser = user || getStorageItem<User>(config.storage.userKey)
-      if (currentUser?.username) {
-        await authService.logout(currentUser.username)
+      const currentSessionId = sessionId || localStorage.getItem(config.storage.sessionIdKey)
+      if (currentSessionId) {
+        await authService.logout(currentSessionId)
       }
     } catch (error) {
       console.error('Logout failed:', error)

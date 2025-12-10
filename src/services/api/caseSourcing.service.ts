@@ -30,8 +30,7 @@ import type {
 /**
  * Helper to check if API response is successful
  */
-const isSuccess = (status: string | undefined): boolean => {
-  if (!status) return false
+const isSuccess = (status: string): boolean => {
   return status.toLowerCase() === 'success'
 }
 
@@ -273,24 +272,15 @@ export const caseSourcingService = {
   /**
    * Get paginated list of unallocated cases
    */
-  async getUnallocatedCases(page: number = 0, size: number = 50): Promise<UnallocatedCasesResponse> {
+  async getUnallocatedCases(page: number = 0, size: number = 20): Promise<UnallocatedCasesResponse> {
     const response = await apiClient.get<ApiResponse<UnallocatedCasesResponse>>(
       API_ENDPOINTS.CASE_SOURCING.UNALLOCATED,
       { params: { page, size } }
     )
-
-    console.log('Unallocated cases API response:', response.data)
-
-    // Handle standard wrapped response format
     const payload = getPayload(response.data)
     if (isSuccess(response.data.status) && payload) {
-      return {
-        content: payload.content || [],
-        totalElements: payload.totalElements ?? 0,
-        totalPages: payload.totalPages ?? 0,
-      }
+      return payload
     }
-
     // Handle case where API returns success but empty/null payload
     if (isSuccess(response.data.status)) {
       return {
@@ -299,7 +289,6 @@ export const caseSourcingService = {
         totalPages: 0,
       }
     }
-
     throw new Error(response.data.message || 'Failed to fetch unallocated cases')
   },
 
