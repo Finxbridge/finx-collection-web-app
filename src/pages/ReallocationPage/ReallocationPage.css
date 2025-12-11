@@ -437,3 +437,105 @@
   margin: 0;
   font-size: 14px;
 }
+
+/* Recent Batches Section */
+.recent-batches-section {
+  margin-top: 24px;
+}
+
+.batches-table-container {
+  overflow-x: auto;
+}
+
+.batches-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.batches-table th,
+.batches-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.batches-table th {
+  font-weight: 600;
+  color: #374151;
+  background: #f9fafb;
+  white-space: nowrap;
+}
+
+.batches-table td {
+  color: #1a1a2e;
+}
+
+.batches-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.batches-table .batch-id {
+  font-family: monospace;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.btn-link-batch {
+  font-family: monospace;
+  font-size: 13px;
+  color: #2563eb;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn-link-batch:hover {
+  text-decoration: underline;
+  color: #1d4ed8;
+}
+
+.table-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-icon:hover {
+  background: #e5e7eb;
+}
+
+.btn-icon svg {
+  width: 16px;
+  height: 16px;
+  color: #6b7280;
+}
+
+.btn-icon--danger:hover {
+  background: #fee2e2;
+}
+
+.btn-icon--danger:hover svg {
+  color: #dc2626;
+}
+
+/* Badge info style */
+.badge--info {
+  background: #dbeafe;
+  color: #2563eb;
+}

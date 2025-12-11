@@ -119,6 +119,12 @@ export function AllocationUploadPage() {
       setUploadResult(result)
       setSuccessMessage('File uploaded successfully! Processing in progress...')
 
+      // Clear the selected file after successful upload
+      setSelectedFile(null)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+
       // Poll for status
       pollBatchStatus(result.batchId)
     } catch (err) {
@@ -138,10 +144,13 @@ export function AllocationUploadPage() {
         if (status.status === 'PROCESSING') {
           setTimeout(checkStatus, 2000)
         } else if (status.status === 'COMPLETED') {
-          setSuccessMessage(`Processing complete! ${status.successful} of ${status.totalCases} records successful.`)
+          setSuccessMessage(`File uploaded and allocated successfully! ${status.successful} of ${status.totalCases} cases allocated.`)
           fetchBatches() // Refresh batches list
         } else if (status.status === 'FAILED') {
           setError('Batch processing failed')
+          fetchBatches() // Refresh batches list
+        } else if (status.status === 'PARTIAL') {
+          setSuccessMessage(`File uploaded and partially allocated. ${status.successful} of ${status.totalCases} cases allocated, ${status.failed} failed.`)
           fetchBatches() // Refresh batches list
         }
       } catch (err) {
@@ -535,7 +544,14 @@ export function AllocationUploadPage() {
               <tbody>
                 {batches.map((batch) => (
                   <tr key={batch.batchId}>
-                    <td className="batch-id">{batch.batchId.substring(0, 12)}...</td>
+                    <td className="batch-id">
+                      <button
+                        className="btn-link-batch"
+                        onClick={() => navigate(`/allocation/batch/${batch.batchId}`)}
+                      >
+                        {batch.batchId.substring(0, 12)}...
+                      </button>
+                    </td>
                     <td>
                       <span className={`badge ${getBatchTypeBadgeClass(batch.batchType)}`}>
                         {batch.batchType}

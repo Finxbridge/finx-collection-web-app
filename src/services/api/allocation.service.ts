@@ -32,6 +32,7 @@ import type {
   FieldFailure,
   ContactUpdateBatchStatus,
   ContactUpdateType,
+  AllocatedCase,
 } from '@types'
 
 const BASE_URL = '/allocations'
@@ -288,6 +289,18 @@ export const allocationService = {
     return response.data.payload
   },
 
+  // ============ Allocated Cases APIs ============
+
+  /**
+   * Get all allocated cases
+   */
+  getAllocatedCases: async (): Promise<AllocatedCase[]> => {
+    const response = await apiClient.get<ApiResponse<AllocatedCase[]>>(
+      `${BASE_URL}/cases/allocated`
+    )
+    return response.data.payload
+  },
+
   // ============ Contact Update APIs ============
 
   /**
@@ -437,6 +450,34 @@ export const reallocationService = {
    */
   exportFailedRows: async (batchId: string): Promise<Blob> => {
     const response = await apiClient.get(`${REALLOCATION_URL}/${batchId}/errors`, {
+      responseType: 'blob',
+    })
+    return response.data
+  },
+
+  /**
+   * Get reallocation batches
+   */
+  getBatches: async (params?: {
+    status?: string
+    startDate?: string
+    endDate?: string
+    page?: number
+    size?: number
+  }): Promise<AllocationBatch[]> => {
+    const response = await apiClient.get<ApiResponse<AllocationBatch[]>>(
+      `${REALLOCATION_URL}/batches`,
+      { params }
+    )
+    return response.data.payload
+  },
+
+  /**
+   * Export reallocation batch as CSV
+   * Note: Uses allocations endpoint as per API design
+   */
+  exportBatch: async (batchId: string): Promise<Blob> => {
+    const response = await apiClient.get(`${BASE_URL}/${batchId}/export`, {
       responseType: 'blob',
     })
     return response.data

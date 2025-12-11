@@ -426,6 +426,11 @@
   color: #dc2626;
 }
 
+.quick-action-card__icon--teal {
+  background: #ccfbf1;
+  color: #0d9488;
+}
+
 .quick-action-card__label {
   font-size: 14px;
   font-weight: 500;

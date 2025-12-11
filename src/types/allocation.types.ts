@@ -173,8 +173,8 @@ export interface ApplyRuleResponse {
 
 // Reallocation Types
 export interface ReallocationByAgentRequest {
-  fromUserId: number
-  toUserId: number
+  fromAgent: string
+  toAgent: string
   reason?: string
 }
 
@@ -190,10 +190,13 @@ export interface ReallocationByFilterRequest {
 }
 
 export interface ReallocationResponse {
-  batchId: string
+  jobId?: string
+  batchId?: string
+  casesReallocated?: number
   totalReallocated?: number
+  estimatedCases?: number | null
   totalMatchingCases?: number
-  status: AllocationBatchStatus
+  status: AllocationBatchStatus | string
 }
 
 // Deallocation Types
@@ -288,4 +291,17 @@ export interface ContactUpdateBatchStatus {
   successful: number
   failed: number
   status: AllocationBatchStatus
+}
+
+// Allocated Cases Types
+export interface AllocatedCaseAgent {
+  userId: number
+  username: string
+}
+
+export interface AllocatedCase {
+  caseId: number
+  primaryAgent: AllocatedCaseAgent
+  secondaryAgent: AllocatedCaseAgent | null
+  allocatedAt: string
 }

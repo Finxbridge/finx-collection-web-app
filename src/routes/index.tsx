@@ -34,6 +34,8 @@ import {
   AgentWorkloadPage,
   ReallocationPage,
   AllocationBatchesPage,
+  AllocationBatchDetailPage,
+  AllocatedCasesPage,
 } from '@pages'
 import { ProtectedRoute } from './ProtectedRoute'
 import { ROUTES } from '@config/constants'
@@ -90,6 +92,9 @@ export function AppRoutes() {
         <Route path={ROUTES.ALLOCATION_WORKLOAD} element={<AgentWorkloadPage />} />
         <Route path={ROUTES.ALLOCATION_REALLOCATION} element={<ReallocationPage />} />
         <Route path={ROUTES.ALLOCATION_BATCHES} element={<AllocationBatchesPage />} />
+        <Route path={ROUTES.ALLOCATION_BATCH_DETAIL} element={<AllocationBatchDetailPage />} />
+        <Route path={ROUTES.REALLOCATION_BATCH_DETAIL} element={<AllocationBatchDetailPage />} />
+        <Route path={ROUTES.ALLOCATED_CASES} element={<AllocatedCasesPage />} />
       </Route>
 
       {/* 404 Not Found */}

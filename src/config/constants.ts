@@ -43,6 +43,9 @@ export const ROUTES = {
   ALLOCATION_WORKLOAD: '/allocation/workload',
   ALLOCATION_REALLOCATION: '/allocation/reallocation',
   ALLOCATION_BATCHES: '/allocation/batches',
+  ALLOCATION_BATCH_DETAIL: '/allocation/batch/:batchId',
+  REALLOCATION_BATCH_DETAIL: '/allocation/reallocation/batch/:batchId',
+  ALLOCATED_CASES: '/allocation/cases',
   NOT_FOUND: '*',
 } as const
 

@@ -18,7 +18,11 @@
       "Bash(if not exist \"c:\\projects\\collections_frontend\\finx-collection-web-app\\src\\pages\\StrategyEnginePage\" mkdir \"c:\\projects\\collections_frontend\\finx-collection-web-app\\src\\pages\\StrategyEnginePage\")",
       "Bash(if not exist \"c:\\projects\\collections_frontend\\finx-collection-web-app\\src\\pages\\AllocationPage\" mkdir \"c:\\projects\\collections_frontend\\finx-collection-web-app\\src\\pages\\AllocationPage\")",
       "Bash(if not exist \"c:\\projects\\collections_frontend\\finx-collection-web-app\\src\\pages\\AllocationPage\\components\" mkdir \"c:\\projects\\collections_frontend\\finx-collection-web-app\\src\\pages\\AllocationPage\\components\")",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(if not exist \"c:\\projects\\collections_frontend\\Collections_frontend_10-12-2025\\finx-collection-web-app\\src\\pages\\AllocationBatchDetailPage\" mkdir \"c:\\projects\\collections_frontend\\Collections_frontend_10-12-2025\\finx-collection-web-app\\src\\pages\\AllocationBatchDetailPage\")",
+      "Bash(if not exist \"c:\\projects\\collections_frontend\\Collections_frontend_10-12-2025\\finx-collection-web-app\\src\\pages\\AllocatedCasesPage\" mkdir \"c:\\projects\\collections_frontend\\Collections_frontend_10-12-2025\\finx-collection-web-app\\src\\pages\\AllocatedCasesPage\")"
     ],
     "deny": [],
     "ask": []

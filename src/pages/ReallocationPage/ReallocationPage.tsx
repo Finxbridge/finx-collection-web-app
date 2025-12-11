@@ -7,7 +7,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { reallocationService, allocationService, apiClient } from '@services/api'
 import { API_ENDPOINTS } from '@config/constants'
-import type { AllocationBatchUploadResponse, AllocationBatchStatusResponse, User } from '@types'
+import type { AllocationBatchUploadResponse, AllocationBatchStatusResponse, User, AllocationBatch } from '@types'
 import './ReallocationPage.css'
 
 type ReallocationMethod = 'upload' | 'agent'
@@ -37,6 +37,23 @@ export function ReallocationPage() {
   const [toAgentId, setToAgentId] = useState('')
   const [agentReason, setAgentReason] = useState('')
 
+  // Recent batches state
+  const [recentBatches, setRecentBatches] = useState<AllocationBatch[]>([])
+  const [isLoadingBatches, setIsLoadingBatches] = useState(true)
+
+  // Fetch recent reallocation batches
+  const fetchRecentBatches = useCallback(async () => {
+    try {
+      setIsLoadingBatches(true)
+      const batches = await reallocationService.getBatches({ page: 0, size: 10 })
+      setRecentBatches(batches)
+    } catch (err) {
+      console.error('Failed to fetch recent batches:', err)
+    } finally {
+      setIsLoadingBatches(false)
+    }
+  }, [])
+
   // Fetch users from system using management API
   const fetchUsers = useCallback(async () => {
     try {
@@ -60,7 +77,8 @@ export function ReallocationPage() {
 
   useEffect(() => {
     fetchUsers()
-  }, [fetchUsers])
+    fetchRecentBatches()
+  }, [fetchUsers, fetchRecentBatches])
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -102,6 +120,10 @@ export function ReallocationPage() {
           setTimeout(checkStatus, 2000)
         } else if (status.status === 'COMPLETED') {
           setSuccessMessage(`Reallocation complete! ${status.successful} of ${status.totalCases} cases reallocated.`)
+          fetchRecentBatches() // Refresh batches list
+        } else if (status.status === 'FAILED') {
+          setError('Batch processing failed')
+          fetchRecentBatches() // Refresh batches list
         }
       } catch (err) {
         console.error('Failed to fetch batch status:', err)
@@ -120,15 +142,18 @@ export function ReallocationPage() {
       setIsSubmitting(true)
       setError('')
       const result = await reallocationService.reallocateByAgent({
-        fromUserId: parseInt(fromAgentId),
-        toUserId: parseInt(toAgentId),
+        fromAgent: fromAgentId,
+        toAgent: toAgentId,
         reason: agentReason || undefined,
       })
-      setSuccessMessage(`Reallocation initiated. ${result.totalReallocated || 0} cases being reallocated.`)
+      const casesCount = result.casesReallocated ?? result.totalReallocated ?? 0
+      setSuccessMessage(`Reallocation ${result.status === 'COMPLETED' ? 'completed' : 'initiated'}. ${casesCount} cases reallocated.`)
       // Reset form
       setFromAgentId('')
       setToAgentId('')
       setAgentReason('')
+      // Refresh batches list
+      fetchRecentBatches()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to reallocate cases')
     } finally {
@@ -174,7 +199,50 @@ export function ReallocationPage() {
       case 'COMPLETED': return 'badge--success'
       case 'PROCESSING': return 'badge--warning'
       case 'FAILED': return 'badge--danger'
+      case 'PARTIAL': return 'badge--info'
       default: return 'badge--default'
+    }
+  }
+
+  const formatDateTime = (dateStr: string): string => {
+    return new Date(dateStr).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
+  const handleExportBatch = async (batchId: string) => {
+    try {
+      const blob = await reallocationService.exportBatch(batchId)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `reallocations_${batchId}.csv`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export batch')
+    }
+  }
+
+  const handleExportBatchErrors = async (batchId: string) => {
+    try {
+      const blob = await reallocationService.exportFailedRows(batchId)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `failed_reallocation_${batchId}.csv`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export errors')
     }
   }
 
@@ -386,6 +454,93 @@ export function ReallocationPage() {
           </div>
         </div>
       )}
+
+      {/* Recent Batches Section */}
+      <div className="reallocation-card recent-batches-section">
+        <div className="reallocation-card__header">
+          <h2>Recent Reallocation Batches</h2>
+          <button className="btn-link" onClick={fetchRecentBatches}>
+            Refresh
+          </button>
+        </div>
+        <div className="reallocation-card__body">
+          {isLoadingBatches ? (
+            <div className="loading-container">
+              <div className="spinner"></div>
+              <span>Loading batches...</span>
+            </div>
+          ) : recentBatches.length === 0 ? (
+            <div className="empty-state">
+              <p>No recent reallocation batches found</p>
+            </div>
+          ) : (
+            <div className="batches-table-container">
+              <table className="batches-table">
+                <thead>
+                  <tr>
+                    <th>Batch ID</th>
+                    <th>Total</th>
+                    <th>Success</th>
+                    <th>Failed</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentBatches.map((batch) => (
+                    <tr key={batch.batchId}>
+                      <td className="batch-id">
+                      <button
+                        className="btn-link-batch"
+                        onClick={() => navigate(`/allocation/reallocation/batch/${batch.batchId}`)}
+                      >
+                        {batch.batchId.substring(0, 16)}...
+                      </button>
+                    </td>
+                      <td>{batch.totalCases}</td>
+                      <td className="text-success">{batch.successful}</td>
+                      <td className="text-danger">{batch.failed}</td>
+                      <td>
+                        <span className={`badge ${getStatusBadgeClass(batch.status)}`}>
+                          {batch.status}
+                        </span>
+                      </td>
+                      <td>{formatDateTime(batch.createdAt)}</td>
+                      <td>
+                        <div className="table-actions">
+                          <button
+                            className="btn-icon"
+                            onClick={() => handleExportBatch(batch.batchId)}
+                            title="Export"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              <polyline points="7 10 12 15 17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </button>
+                          {batch.failed > 0 && (
+                            <button
+                              className="btn-icon btn-icon--danger"
+                              onClick={() => handleExportBatchErrors(batch.batchId)}
+                              title="Export Failed Rows"
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
