@@ -3,31 +3,14 @@
  * Manage case reallocations between agents
  */
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { reallocationService, allocationService } from '@services/api'
-import type { AllocationBatchUploadResponse, AllocationBatchStatusResponse } from '@types'
+import { reallocationService, allocationService, apiClient } from '@services/api'
+import { API_ENDPOINTS } from '@config/constants'
+import type { AllocationBatchUploadResponse, AllocationBatchStatusResponse, User } from '@types'
 import './ReallocationPage.css'
 
-type ReallocationMethod = 'upload' | 'agent' | 'filter'
-
-// Mock agents for demo
-const MOCK_AGENTS = [
-  { id: 101, name: 'Agent John', geography: 'MH_MUM' },
-  { id: 102, name: 'Agent Jane', geography: 'MH_MUM' },
-  { id: 103, name: 'Agent Mike', geography: 'MH_PUN' },
-  { id: 104, name: 'Agent Sarah', geography: 'KA_BLR' },
-  { id: 105, name: 'Agent Tom', geography: 'TN_CHE' },
-]
-
-const GEOGRAPHIES = [
-  { code: 'MH_MUM', name: 'Mumbai' },
-  { code: 'MH_PUN', name: 'Pune' },
-  { code: 'KA_BLR', name: 'Bangalore' },
-  { code: 'TN_CHE', name: 'Chennai' },
-]
-
-const DPD_BUCKETS = ['0-30', '30-60', '60-90', '90+']
+type ReallocationMethod = 'upload' | 'agent'
 
 export function ReallocationPage() {
   const navigate = useNavigate()
@@ -45,18 +28,39 @@ export function ReallocationPage() {
   const [uploadResult, setUploadResult] = useState<AllocationBatchUploadResponse | null>(null)
   const [batchStatus, setBatchStatus] = useState<AllocationBatchStatusResponse | null>(null)
 
+  // Users/Agents state
+  const [users, setUsers] = useState<User[]>([])
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true)
+
   // Agent reallocation state
   const [fromAgentId, setFromAgentId] = useState(fromAgentParam || '')
   const [toAgentId, setToAgentId] = useState('')
   const [agentReason, setAgentReason] = useState('')
 
-  // Filter reallocation state
-  const [filterGeography, setFilterGeography] = useState('')
-  const [filterBucket, setFilterBucket] = useState('')
-  const [filterMinDpd, setFilterMinDpd] = useState('')
-  const [filterMaxDpd, setFilterMaxDpd] = useState('')
-  const [filterToAgentId, setFilterToAgentId] = useState('')
-  const [filterReason, setFilterReason] = useState('')
+  // Fetch users from system using management API
+  const fetchUsers = useCallback(async () => {
+    try {
+      setIsLoadingUsers(true)
+      const response = await apiClient.get<{ status: string; payload: { content: User[] }; message: string }>(
+        API_ENDPOINTS.MANAGEMENT.USERS.LIST,
+        { params: { page: 0, size: 100 } }
+      )
+      // Response format: { status, payload: { content: [...users] }, message }
+      const allUsers = response.data.payload?.content || []
+      // Filter only active users
+      const activeUsers = allUsers.filter((user: User) => user.status === 'ACTIVE')
+      setUsers(activeUsers)
+    } catch (err) {
+      console.error('Failed to fetch users:', err)
+      setError('Failed to load users')
+    } finally {
+      setIsLoadingUsers(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchUsers()
+  }, [fetchUsers])
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -132,40 +136,6 @@ export function ReallocationPage() {
     }
   }
 
-  const handleFilterReallocation = async () => {
-    if (!filterToAgentId) {
-      setError('Please select a destination agent')
-      return
-    }
-
-    try {
-      setIsSubmitting(true)
-      setError('')
-      const result = await reallocationService.reallocateByFilter({
-        filterCriteria: {
-          geography: filterGeography || undefined,
-          bucket: filterBucket || undefined,
-          minDpd: filterMinDpd ? parseInt(filterMinDpd) : undefined,
-          maxDpd: filterMaxDpd ? parseInt(filterMaxDpd) : undefined,
-        },
-        toUserId: parseInt(filterToAgentId),
-        reason: filterReason || undefined,
-      })
-      setSuccessMessage(`Reallocation initiated. ${result.totalMatchingCases || 0} matching cases will be reallocated.`)
-      // Reset form
-      setFilterGeography('')
-      setFilterBucket('')
-      setFilterMinDpd('')
-      setFilterMaxDpd('')
-      setFilterToAgentId('')
-      setFilterReason('')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reallocate cases')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
   const handleExportErrors = async () => {
     if (!uploadResult) return
     try {
@@ -221,7 +191,7 @@ export function ReallocationPage() {
         <div className="reallocation-header__content">
           <h1 className="reallocation-title">Reallocate Cases</h1>
           <p className="reallocation-subtitle">
-            Move cases between agents using bulk upload, agent transfer, or filters
+            Move cases between agents using bulk upload or agent transfer
           </p>
         </div>
       </div>
@@ -264,15 +234,6 @@ export function ReallocationPage() {
             <path d="M21 13V15C21 16.0609 20.5786 17.0783 19.8284 17.8284C19.0783 18.5786 18.0609 19 17 19H3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           By Agent
-        </button>
-        <button
-          className={`method-btn ${method === 'filter' ? 'method-btn--active' : ''}`}
-          onClick={() => setMethod('filter')}
-        >
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          By Filter
         </button>
       </div>
 
@@ -359,39 +320,50 @@ export function ReallocationPage() {
               Transfer all cases from one agent to another
             </p>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">From Agent *</label>
-                <select
-                  className="form-select"
-                  value={fromAgentId}
-                  onChange={(e) => setFromAgentId(e.target.value)}
-                >
-                  <option value="">Select source agent</option>
-                  {MOCK_AGENTS.map((agent) => (
-                    <option key={agent.id} value={agent.id}>
-                      {agent.name} ({agent.geography})
-                    </option>
-                  ))}
-                </select>
+            {isLoadingUsers ? (
+              <div className="loading-container">
+                <div className="spinner"></div>
+                <span>Loading users...</span>
               </div>
+            ) : users.length === 0 ? (
+              <div className="empty-state">
+                <p>No active users found in the system</p>
+              </div>
+            ) : (
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">From Agent *</label>
+                  <select
+                    className="form-select"
+                    value={fromAgentId}
+                    onChange={(e) => setFromAgentId(e.target.value)}
+                  >
+                    <option value="">Select source agent</option>
+                    {users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.firstName} {user.lastName} {user.state || user.city ? `(${[user.state, user.city].filter(Boolean).join(', ')})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div className="form-group">
-                <label className="form-label">To Agent *</label>
-                <select
-                  className="form-select"
-                  value={toAgentId}
-                  onChange={(e) => setToAgentId(e.target.value)}
-                >
-                  <option value="">Select destination agent</option>
-                  {MOCK_AGENTS.filter((a) => a.id.toString() !== fromAgentId).map((agent) => (
-                    <option key={agent.id} value={agent.id}>
-                      {agent.name} ({agent.geography})
-                    </option>
-                  ))}
-                </select>
+                <div className="form-group">
+                  <label className="form-label">To Agent *</label>
+                  <select
+                    className="form-select"
+                    value={toAgentId}
+                    onChange={(e) => setToAgentId(e.target.value)}
+                  >
+                    <option value="">Select destination agent</option>
+                    {users.filter((u) => u.id.toString() !== fromAgentId).map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.firstName} {user.lastName} {user.state || user.city ? `(${[user.state, user.city].filter(Boolean).join(', ')})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="form-group">
               <label className="form-label">Reason</label>
@@ -410,119 +382,6 @@ export function ReallocationPage() {
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Processing...' : 'Reallocate Cases'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* By Filter Method */}
-      {method === 'filter' && (
-        <div className="reallocation-card">
-          <div className="reallocation-card__header">
-            <h2>Reallocate by Filter</h2>
-          </div>
-          <div className="reallocation-card__body">
-            <p className="method-description">
-              Find and reallocate cases matching specific criteria
-            </p>
-
-            <div className="filter-section">
-              <h3>Filter Criteria</h3>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Geography</label>
-                  <select
-                    className="form-select"
-                    value={filterGeography}
-                    onChange={(e) => setFilterGeography(e.target.value)}
-                  >
-                    <option value="">Any geography</option>
-                    {GEOGRAPHIES.map((geo) => (
-                      <option key={geo.code} value={geo.code}>
-                        {geo.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">DPD Bucket</label>
-                  <select
-                    className="form-select"
-                    value={filterBucket}
-                    onChange={(e) => setFilterBucket(e.target.value)}
-                  >
-                    <option value="">Any bucket</option>
-                    {DPD_BUCKETS.map((bucket) => (
-                      <option key={bucket} value={bucket}>
-                        {bucket}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Min DPD</label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    placeholder="0"
-                    value={filterMinDpd}
-                    onChange={(e) => setFilterMinDpd(e.target.value)}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Max DPD</label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    placeholder="999"
-                    value={filterMaxDpd}
-                    onChange={(e) => setFilterMaxDpd(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="filter-section">
-              <h3>Destination</h3>
-              <div className="form-group">
-                <label className="form-label">To Agent *</label>
-                <select
-                  className="form-select"
-                  value={filterToAgentId}
-                  onChange={(e) => setFilterToAgentId(e.target.value)}
-                >
-                  <option value="">Select destination agent</option>
-                  {MOCK_AGENTS.map((agent) => (
-                    <option key={agent.id} value={agent.id}>
-                      {agent.name} ({agent.geography})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Reason</label>
-                <textarea
-                  className="form-textarea"
-                  placeholder="Enter reason for reallocation"
-                  rows={2}
-                  value={filterReason}
-                  onChange={(e) => setFilterReason(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <button
-              className="btn-primary btn-full"
-              onClick={handleFilterReallocation}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Processing...' : 'Find & Reallocate Cases'}
             </button>
           </div>
         </div>

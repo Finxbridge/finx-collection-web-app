@@ -9,33 +9,43 @@ export type AllocationAction = 'ALLOCATED' | 'REALLOCATED' | 'DEALLOCATED'
 export type ContactUpdateType = 'MOBILE_UPDATE' | 'EMAIL_UPDATE' | 'ADDRESS_UPDATE'
 export type AllocationErrorType = 'VALIDATION_ERROR' | 'NOT_FOUND' | 'BUSINESS_ERROR' | 'INTERNAL_ERROR'
 
+// Allocation Rule Status
+export type AllocationRuleStatus = 'DRAFT' | 'READY_FOR_APPLY' | 'ACTIVE' | 'INACTIVE'
+
 // Allocation Rule
 export interface AllocationRule {
   id: number
   name: string
   description?: string
   ruleType: RuleType
-  geographies: string[]
-  buckets?: string[]
-  maxCasesPerAgent?: number
-  agentIds?: number[]
-  percentages?: number[]
-  status: 'ACTIVE' | 'INACTIVE'
+  // Geography fields (required for GEOGRAPHY rule type)
+  states?: string[]
+  cities?: string[]
+  status: AllocationRuleStatus
   priority: number
   createdBy: number
   createdAt: string
   updatedAt: string
 }
 
+/**
+ * Create Allocation Rule Request
+ *
+ * GEOGRAPHY Rule:
+ * - At least one geography filter (states or cities) is required
+ * - Matches cases to agents based on geographic location
+ *
+ * CAPACITY_BASED Rule:
+ * - No geography fields required
+ * - Distributes ALL unallocated cases to ALL active agents based on workload
+ */
 export interface AllocationRuleCreate {
   name: string
   description?: string
   ruleType: RuleType
-  geographies: string[]
-  buckets?: string[]
-  maxCasesPerAgent?: number
-  agentIds?: number[]
-  percentages?: number[]
+  // Geography fields (required for GEOGRAPHY rule, not needed for CAPACITY_BASED)
+  states?: string[]
+  cities?: string[]
   priority?: number
 }
 
@@ -103,6 +113,15 @@ export interface AgentAllocationPreview {
   casesToAllocate: number
 }
 
+// Eligible Agent in simulation result
+export interface EligibleAgent {
+  agentId: number
+  agentName: string
+  capacity: number
+  currentWorkload: number
+  availableCapacity: number
+}
+
 // Case Allocation Types
 export interface CaseAllocation {
   caseId: number
@@ -125,28 +144,31 @@ export interface CaseAllocationHistory {
 }
 
 // Simulation & Apply Types
+/**
+ * Simulation Result Response
+ * Returns preview of allocation before applying
+ */
 export interface RuleSimulationResult {
   ruleId: number
-  ruleName: string
-  totalMatchingCases: number
+  unallocatedCases: number
   caseIds: number[]
-  agentAllocationPreview: AgentAllocationPreview[]
-}
-
-export interface ApplyRuleRequest {
   agentIds: number[]
-  percentages?: number[]
-  caseIds?: number[]
-  maxCases?: number
+  eligibleAgents: EligibleAgent[]
+  suggestedDistribution: Record<string, number>
 }
 
+/**
+ * Apply Rule Response
+ * Auto-detects agents from the rule - pass empty body {}
+ */
 export interface ApplyRuleResponse {
-  batchId: string
-  totalAllocated: number
-  allocationBreakdown: {
+  ruleId: number
+  totalCasesAllocated: number
+  allocations: {
     agentId: number
     allocated: number
   }[]
+  status: AllocationRuleStatus
 }
 
 // Reallocation Types

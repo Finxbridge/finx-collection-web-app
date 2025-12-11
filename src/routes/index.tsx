@@ -10,6 +10,7 @@ import {
   LoginPage,
   DashboardPage,
   NotFoundPage,
+  ProfilePage,
   ForgotPasswordPage,
   VerifyOtpPage,
   ResetPasswordPage,
@@ -29,10 +30,10 @@ import {
   AllocationPage,
   AllocationUploadPage,
   AllocationRulesPage,
+  RuleDetailsPage,
   AgentWorkloadPage,
   ReallocationPage,
   AllocationBatchesPage,
-  FailureAnalysisPage,
 } from '@pages'
 import { ProtectedRoute } from './ProtectedRoute'
 import { ROUTES } from '@config/constants'
@@ -58,6 +59,7 @@ export function AppRoutes() {
         }
       >
         <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
+        <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
 
         {/* Access Management routes */}
         <Route path={ROUTES.USERS} element={<UsersPage />} />
@@ -84,10 +86,10 @@ export function AppRoutes() {
         <Route path={ROUTES.ALLOCATION} element={<AllocationPage />} />
         <Route path={ROUTES.ALLOCATION_UPLOAD} element={<AllocationUploadPage />} />
         <Route path={ROUTES.ALLOCATION_RULES} element={<AllocationRulesPage />} />
+        <Route path={ROUTES.ALLOCATION_RULE_DETAIL} element={<RuleDetailsPage />} />
         <Route path={ROUTES.ALLOCATION_WORKLOAD} element={<AgentWorkloadPage />} />
         <Route path={ROUTES.ALLOCATION_REALLOCATION} element={<ReallocationPage />} />
         <Route path={ROUTES.ALLOCATION_BATCHES} element={<AllocationBatchesPage />} />
-        <Route path={ROUTES.ALLOCATION_FAILURE_ANALYSIS} element={<FailureAnalysisPage />} />
       </Route>
 
       {/* 404 Not Found */}

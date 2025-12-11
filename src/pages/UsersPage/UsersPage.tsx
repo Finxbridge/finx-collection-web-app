@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { userManagementService, roleService } from '@services/api'
+import { userManagementService, roleService, masterDataService } from '@services/api'
 import { Table, Pagination, Column } from '@components/common/Table'
 import { Modal } from '@components/common/Modal'
 import { Button } from '@components/common/Button'
@@ -16,6 +16,7 @@ import type {
   CreateUserRequest,
   UpdateUserRequest,
   AllocationBucket,
+  MasterData,
 } from '@types'
 import './UsersPage.css'
 
@@ -39,8 +40,9 @@ export function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Geography options (can be fetched from API later)
-  const geographyOptions = ['HYDERABAD', 'DELHI', 'MUMBAI', 'BANGALORE', 'CHENNAI', 'KOLKATA', 'PUNE']
+  // City and State options from Master Data
+  const [cityOptions, setCityOptions] = useState<MasterData[]>([])
+  const [stateOptions, setStateOptions] = useState<MasterData[]>([])
 
   // Allocation bucket options
   const allocationBucketOptions: AllocationBucket[] = ['DEFAULT', 'HIGH', 'MEDIUM', 'LOW']
@@ -55,7 +57,8 @@ export function UsersPage() {
     mobileNumber: '',
     status: 'ACTIVE',
     userGroupId: null,
-    assignedGeographies: [],
+    city: '',
+    state: '',
     maxCaseCapacity: 100,
     allocationPercentage: 100,
     allocationBucket: 'DEFAULT',
@@ -89,10 +92,30 @@ export function UsersPage() {
     }
   }, [])
 
+  const fetchCityOptions = useCallback(async () => {
+    try {
+      const cities = await masterDataService.getByType('CITY')
+      setCityOptions(cities)
+    } catch (err) {
+      console.error('Failed to fetch city options:', err)
+    }
+  }, [])
+
+  const fetchStateOptions = useCallback(async () => {
+    try {
+      const states = await masterDataService.getByType('STATE')
+      setStateOptions(states)
+    } catch (err) {
+      console.error('Failed to fetch state options:', err)
+    }
+  }, [])
+
   useEffect(() => {
     fetchUsers()
     fetchRoles()
-  }, [fetchUsers, fetchRoles])
+    fetchCityOptions()
+    fetchStateOptions()
+  }, [fetchUsers, fetchRoles, fetchCityOptions, fetchStateOptions])
 
   const handleViewUser = (user: UserSummary) => {
     navigate(`/access-management/users/${user.id}`)
@@ -101,7 +124,8 @@ export function UsersPage() {
   const handleEditUser = async (user: UserSummary) => {
     try {
       const fullUser = await userManagementService.getById(user.id) as User & {
-        assignedGeographies?: string[]
+        city?: string
+        state?: string
         maxCaseCapacity?: number
         allocationPercentage?: number
         allocationBucket?: AllocationBucket
@@ -118,7 +142,8 @@ export function UsersPage() {
         mobileNumber: fullUser.mobileNumber || '',
         status: fullUser.status || 'ACTIVE',
         userGroupId: fullUser.userGroupId || null,
-        assignedGeographies: fullUser.assignedGeographies || [],
+        city: fullUser.city || '',
+        state: fullUser.state || '',
         maxCaseCapacity: fullUser.maxCaseCapacity || 100,
         allocationPercentage: fullUser.allocationPercentage || 100,
         allocationBucket: fullUser.allocationBucket || 'DEFAULT',
@@ -161,7 +186,8 @@ export function UsersPage() {
         mobileNumber: formData.mobileNumber,
         status: formData.status,
         userGroupId: formData.userGroupId,
-        assignedGeographies: formData.assignedGeographies,
+        city: formData.city,
+        state: formData.state,
         maxCaseCapacity: formData.maxCaseCapacity,
         allocationPercentage: formData.allocationPercentage,
         allocationBucket: formData.allocationBucket,
@@ -205,7 +231,8 @@ export function UsersPage() {
       mobileNumber: '',
       status: 'ACTIVE',
       userGroupId: null,
-      assignedGeographies: [],
+      city: '',
+      state: '',
       maxCaseCapacity: 100,
       allocationPercentage: 100,
       allocationBucket: 'DEFAULT',
@@ -384,10 +411,10 @@ export function UsersPage() {
         size="md"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setIsCreateModalOpen(false)}>
+            <Button type="button" variant="secondary" onClick={() => setIsCreateModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreateUser} isLoading={isSubmitting}>
+            <Button type="button" onClick={handleCreateUser} isLoading={isSubmitting}>
               Create User
             </Button>
           </>
@@ -468,28 +495,32 @@ export function UsersPage() {
               <option value="LOCKED">Locked</option>
             </select>
           </div>
-          <div className="form-group">
-            <label className="form-label">Assigned Geographies</label>
-            <div className="checkbox-group">
-              {geographyOptions.map((geo) => (
-                <label key={geo} className="checkbox-item">
-                  <input
-                    type="checkbox"
-                    checked={formData.assignedGeographies.includes(geo)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setFormData({ ...formData, assignedGeographies: [...formData.assignedGeographies, geo] })
-                      } else {
-                        setFormData({
-                          ...formData,
-                          assignedGeographies: formData.assignedGeographies.filter((g) => g !== geo),
-                        })
-                      }
-                    }}
-                  />
-                  <span>{geo}</span>
-                </label>
-              ))}
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">State</label>
+              <select
+                className="form-input"
+                value={formData.state}
+                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+              >
+                <option value="">Select State</option>
+                {stateOptions.map((state) => (
+                  <option key={state.id} value={state.code}>{state.value}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">City</label>
+              <select
+                className="form-input"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+              >
+                <option value="">Select City</option>
+                {cityOptions.map((city) => (
+                  <option key={city.id} value={city.code}>{city.value}</option>
+                ))}
+              </select>
             </div>
           </div>
           <div className="form-row">
@@ -563,10 +594,10 @@ export function UsersPage() {
         size="md"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>
+            <Button type="button" variant="secondary" onClick={() => setIsEditModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleUpdateUser} isLoading={isSubmitting}>
+            <Button type="button" onClick={handleUpdateUser} isLoading={isSubmitting}>
               Save Changes
             </Button>
           </>
@@ -635,28 +666,32 @@ export function UsersPage() {
               <option value="LOCKED">Locked</option>
             </select>
           </div>
-          <div className="form-group">
-            <label className="form-label">Assigned Geographies</label>
-            <div className="checkbox-group">
-              {geographyOptions.map((geo) => (
-                <label key={geo} className="checkbox-item">
-                  <input
-                    type="checkbox"
-                    checked={formData.assignedGeographies.includes(geo)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setFormData({ ...formData, assignedGeographies: [...formData.assignedGeographies, geo] })
-                      } else {
-                        setFormData({
-                          ...formData,
-                          assignedGeographies: formData.assignedGeographies.filter((g) => g !== geo),
-                        })
-                      }
-                    }}
-                  />
-                  <span>{geo}</span>
-                </label>
-              ))}
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">State</label>
+              <select
+                className="form-input"
+                value={formData.state}
+                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+              >
+                <option value="">Select State</option>
+                {stateOptions.map((state) => (
+                  <option key={state.id} value={state.code}>{state.value}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">City</label>
+              <select
+                className="form-input"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+              >
+                <option value="">Select City</option>
+                {cityOptions.map((city) => (
+                  <option key={city.id} value={city.code}>{city.value}</option>
+                ))}
+              </select>
             </div>
           </div>
           <div className="form-row">
@@ -730,10 +765,10 @@ export function UsersPage() {
         size="sm"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>
+            <Button type="button" variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="danger" onClick={handleDeleteUser} isLoading={isSubmitting}>
+            <Button type="button" variant="danger" onClick={handleDeleteUser} isLoading={isSubmitting}>
               Delete User
             </Button>
           </>

@@ -16,7 +16,6 @@ import type {
   CaseAllocation,
   CaseAllocationHistory,
   RuleSimulationResult,
-  ApplyRuleRequest,
   ApplyRuleResponse,
   ReallocationByAgentRequest,
   ReallocationByFilterRequest,
@@ -143,6 +142,7 @@ export const allocationService = {
 
   /**
    * Get allocation rule by ID
+   * API: GET /allocations/allocation-rules/{ruleId}
    */
   getRuleById: async (ruleId: number): Promise<AllocationRule> => {
     const response = await apiClient.get<ApiResponse<AllocationRule>>(
@@ -192,11 +192,14 @@ export const allocationService = {
 
   /**
    * Apply allocation rule
+   * Auto-detects agents from the rule - pass empty body {}
+   * For GEOGRAPHY: Auto-detects agents matching geography
+   * For CAPACITY_BASED: Auto-detects ALL active agents
    */
-  applyRule: async (ruleId: number, request: ApplyRuleRequest): Promise<ApplyRuleResponse> => {
+  applyRule: async (ruleId: number): Promise<ApplyRuleResponse> => {
     const response = await apiClient.post<ApiResponse<ApplyRuleResponse>>(
       `${BASE_URL}/allocation-rules/${ruleId}/apply`,
-      request
+      {}
     )
     return response.data.payload
   },

@@ -5,7 +5,6 @@
 
 import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { useAuth } from '@hooks'
 import { ROUTES } from '@config/constants'
 import './Sidebar.css'
 
@@ -18,7 +17,6 @@ interface MenuItem {
 
 export function Sidebar() {
   const location = useLocation()
-  const { user } = useAuth()
   const [expandedMenus, setExpandedMenus] = useState<string[]>(['access-management', 'case-sourcing', 'strategy-engine', 'allocation'])
 
   const toggleMenu = (menuId: string) => {
@@ -558,17 +556,6 @@ export function Sidebar() {
         label: 'Batches',
         path: ROUTES.ALLOCATION_BATCHES,
       },
-      {
-        icon: (
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-            <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        ),
-        label: 'Failure Analysis',
-        path: ROUTES.ALLOCATION_FAILURE_ANALYSIS,
-      },
     ],
   }
 
@@ -827,35 +814,6 @@ export function Sidebar() {
           <span className="sidebar__nav-label">{settingsItem.label}</span>
         </NavLink>
       </nav>
-
-      <div className="sidebar__footer">
-        <div className="sidebar__user">
-          <div className="sidebar__user-avatar">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-          <div className="sidebar__user-info">
-            <div className="sidebar__user-name">
-              {user ? `${user.firstName} ${user.lastName}` : 'Guest User'}
-            </div>
-            <div className="sidebar__user-role">{user?.role || 'Guest'}</div>
-          </div>
-        </div>
-      </div>
     </aside>
   )
 }

@@ -9,6 +9,8 @@ import type {
   ApiResponse,
   MasterData,
   MasterDataRequest,
+  MasterDataCategory,
+  MasterDataCategoriesResponse,
   BulkUploadResult,
 } from '@types'
 
@@ -29,15 +31,15 @@ const getPayload = <T>(response: ApiResponse<T>): T | null => {
 export const masterDataService = {
   /**
    * Get all categories/data types
-   * GET /master-data/categories
+   * GET /master-data/all
    */
-  async getCategories(): Promise<string[]> {
-    const response = await apiClient.get<ApiResponse<string[]>>(
+  async getCategories(): Promise<MasterDataCategory[]> {
+    const response = await apiClient.get<ApiResponse<MasterDataCategoriesResponse>>(
       API_ENDPOINTS.MASTER_DATA.CATEGORIES
     )
     const payload = getPayload(response.data)
     if (isSuccess(response.data.status) && payload) {
-      return payload
+      return payload.categories
     }
     throw new Error(response.data.message || 'Failed to fetch categories')
   },
@@ -104,16 +106,15 @@ export const masterDataService = {
   },
 
   /**
-   * Bulk upload master data (V1 - with type parameter)
-   * POST /master-data/bulk-upload with type as form field
+   * Bulk upload master data (without type - type is in CSV)
+   * POST /master-data/bulk-upload
    */
-  async bulkUploadV1(type: string, file: File): Promise<BulkUploadResult> {
+  async bulkUpload(file: File): Promise<BulkUploadResult> {
     const formData = new FormData()
-    formData.append('type', type)
     formData.append('file', file)
 
     const response = await apiClient.post<ApiResponse<BulkUploadResult>>(
-      API_ENDPOINTS.MASTER_DATA.BULK_UPLOAD_V1,
+      API_ENDPOINTS.MASTER_DATA.BULK_UPLOAD,
       formData,
       {
         headers: {
@@ -129,17 +130,18 @@ export const masterDataService = {
   },
 
   /**
-   * Bulk upload master data (V2 - type in CSV)
-   * POST /master-data/bulk-upload-v2
+   * Bulk upload master data with type parameter
+   * POST /master-data/bulk-upload-by-type?type={type}
    */
-  async bulkUploadV2(file: File): Promise<BulkUploadResult> {
+  async bulkUploadByType(type: string, file: File): Promise<BulkUploadResult> {
     const formData = new FormData()
     formData.append('file', file)
 
     const response = await apiClient.post<ApiResponse<BulkUploadResult>>(
-      API_ENDPOINTS.MASTER_DATA.BULK_UPLOAD_V2,
+      API_ENDPOINTS.MASTER_DATA.BULK_UPLOAD_BY_TYPE,
       formData,
       {
+        params: { type },
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -153,11 +155,24 @@ export const masterDataService = {
   },
 
   /**
-   * Download CSV template
-   * GET /master-data/template
+   * Download CSV template for attributes (within a category)
+   * GET /master-data/upload/template?includeSample=true
    */
-  async downloadTemplate(): Promise<Blob> {
+  async downloadTemplate(includeSample = true): Promise<Blob> {
     const response = await apiClient.get(API_ENDPOINTS.MASTER_DATA.TEMPLATE, {
+      params: { includeSample },
+      responseType: 'blob',
+    })
+    return response.data
+  },
+
+  /**
+   * Download CSV template for bulk categories upload
+   * GET /master-data/upload/template-v2?includeSample=true
+   */
+  async downloadCategoryTemplate(includeSample = true): Promise<Blob> {
+    const response = await apiClient.get(API_ENDPOINTS.MASTER_DATA.TEMPLATE_V2, {
+      params: { includeSample },
       responseType: 'blob',
     })
     return response.data

@@ -42,7 +42,8 @@ export interface User {
   role?: LegacyUserRole
   roles?: UserRole[]
   avatar?: string
-  assignedGeographies?: string[]
+  city?: string
+  state?: string
   maxCaseCapacity?: number
   currentCaseCount?: number
   allocationPercentage?: number
@@ -260,7 +261,8 @@ export interface CreateUserRequest {
   mobileNumber?: string
   status: UserStatus
   userGroupId?: number | null
-  assignedGeographies: string[]
+  city: string
+  state: string
   maxCaseCapacity: number
   allocationPercentage: number
   allocationBucket: AllocationBucket
@@ -274,7 +276,8 @@ export interface UpdateUserRequest {
   mobileNumber?: string
   status?: UserStatus
   userGroupId?: number | null
-  assignedGeographies?: string[]
+  city?: string
+  state?: string
   maxCaseCapacity?: number
   allocationPercentage?: number
   allocationBucket?: AllocationBucket

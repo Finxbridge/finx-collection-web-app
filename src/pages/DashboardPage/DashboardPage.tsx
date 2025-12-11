@@ -196,127 +196,63 @@ export function DashboardPage() {
         ))}
       </div>
 
-      {/* Content Grid */}
-      <div className="dashboard-grid">
-        {/* Recent Activity */}
-        <div className="dashboard-card">
-          <div className="dashboard-card__header">
-            <h2 className="dashboard-card__title">Recent Activity</h2>
-            <a href="/activity" className="dashboard-card__link">
-              View all
-            </a>
-          </div>
-          <div className="dashboard-card__content">
-            <div className="activity-list">
-              {recentActivity.map((activity) => (
-                <div key={activity.id} className="activity-item">
-                  <div className={`activity-icon activity-icon--${activity.type}`}>
-                    {activity.type === 'payment' && (
-                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path
-                          d="M20 6L9 17L4 12"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    )}
-                    {activity.type === 'new_case' && (
-                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path
-                          d="M12 5V19M5 12H19"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    )}
-                    {activity.type === 'overdue' && (
-                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-                        <path
-                          d="M12 8V12M12 16H12.01"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    )}
-                  </div>
-                  <div className="activity-details">
-                    <div className="activity-customer">{activity.customer}</div>
-                    <div className="activity-time">{activity.time}</div>
-                  </div>
-                  <div className="activity-amount">{activity.amount}</div>
-                  <div className={`activity-status activity-status--${activity.status}`}>
-                    {activity.status}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+      {/* Recent Activity */}
+      <div className="dashboard-card dashboard-card--full">
+        <div className="dashboard-card__header">
+          <h2 className="dashboard-card__title">Recent Activity</h2>
+          <a href="/activity" className="dashboard-card__link">
+            View all
+          </a>
         </div>
-
-        {/* Quick Actions */}
-        <div className="dashboard-card">
-          <div className="dashboard-card__header">
-            <h2 className="dashboard-card__title">Quick Actions</h2>
-          </div>
-          <div className="dashboard-card__content">
-            <div className="quick-actions">
-              <button className="quick-action">
-                <div className="quick-action__icon quick-action__icon--blue">
-                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                      d="M12 5V19M5 12H19"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+        <div className="dashboard-card__content">
+          <div className="activity-list">
+            {recentActivity.map((activity) => (
+              <div key={activity.id} className="activity-item">
+                <div className={`activity-icon activity-icon--${activity.type}`}>
+                  {activity.type === 'payment' && (
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M20 6L9 17L4 12"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                  {activity.type === 'new_case' && (
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M12 5V19M5 12H19"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                  {activity.type === 'overdue' && (
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                      <path
+                        d="M12 8V12M12 16H12.01"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  )}
                 </div>
-                <div className="quick-action__text">
-                  <div className="quick-action__title">New Customer</div>
-                  <div className="quick-action__desc">Add a new customer</div>
+                <div className="activity-details">
+                  <div className="activity-customer">{activity.customer}</div>
+                  <div className="activity-time">{activity.time}</div>
                 </div>
-              </button>
-              <button className="quick-action">
-                <div className="quick-action__icon quick-action__icon--green">
-                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                      d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    />
-                    <path d="M14 2V8H20" stroke="currentColor" strokeWidth="2" />
-                  </svg>
+                <div className="activity-amount">{activity.amount}</div>
+                <div className={`activity-status activity-status--${activity.status}`}>
+                  {activity.status}
                 </div>
-                <div className="quick-action__text">
-                  <div className="quick-action__title">Create Case</div>
-                  <div className="quick-action__desc">Start a new collection</div>
-                </div>
-              </button>
-              <button className="quick-action">
-                <div className="quick-action__icon quick-action__icon--purple">
-                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                      d="M21 15V19C21 19.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 19.5304 3 19V15"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    />
-                    <polyline points="17 8 12 3 7 8" stroke="currentColor" strokeWidth="2" />
-                    <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" strokeWidth="2" />
-                  </svg>
-                </div>
-                <div className="quick-action__text">
-                  <div className="quick-action__title">Generate Report</div>
-                  <div className="quick-action__desc">Export analytics</div>
-                </div>
-              </button>
-            </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

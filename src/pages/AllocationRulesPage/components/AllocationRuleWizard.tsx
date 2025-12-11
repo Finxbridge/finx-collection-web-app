@@ -1,12 +1,16 @@
 /**
  * Allocation Rule Wizard Component
  * Multi-step wizard for creating and editing allocation rules
+ *
+ * Supports two rule types:
+ * 1. GEOGRAPHY - Matches cases to agents based on geographic location (state/city)
+ * 2. CAPACITY_BASED - Distributes ALL unallocated cases to ALL active agents
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { allocationService } from '@services/api'
-import type { AllocationRule, AllocationRuleCreate, RuleType, AgentWorkload } from '@types'
+import { allocationService, masterDataService } from '@services/api'
+import type { AllocationRule, AllocationRuleCreate, RuleType, MasterData } from '@types'
 import './AllocationRuleWizard.css'
 
 interface AllocationRuleWizardProps {
@@ -16,56 +20,51 @@ interface AllocationRuleWizardProps {
   editRule: AllocationRule | null
 }
 
-type WizardStep = 'basic' | 'type' | 'geography' | 'agents' | 'review'
+type WizardStep = 'basic' | 'type' | 'geography' | 'review'
 
-const STEPS: { key: WizardStep; label: string }[] = [
-  { key: 'basic', label: 'Basic Info' },
-  { key: 'type', label: 'Rule Type' },
-  { key: 'geography', label: 'Geography' },
-  { key: 'agents', label: 'Agents' },
-  { key: 'review', label: 'Review' },
-]
+// Steps are dynamically determined based on rule type
+const getStepsForRuleType = (ruleType: RuleType | ''): { key: WizardStep; label: string }[] => {
+  const baseSteps = [
+    { key: 'basic' as WizardStep, label: 'Basic Info' },
+    { key: 'type' as WizardStep, label: 'Rule Type' },
+  ]
+
+  // GEOGRAPHY requires geography selection step
+  // CAPACITY_BASED skips geography (allocates ALL cases to ALL agents)
+  if (ruleType === 'GEOGRAPHY') {
+    return [...baseSteps, { key: 'geography' as WizardStep, label: 'Geography' }, { key: 'review' as WizardStep, label: 'Review' }]
+  }
+
+  // CAPACITY_BASED or not selected yet - no geography step needed
+  return [...baseSteps, { key: 'review' as WizardStep, label: 'Review' }]
+}
 
 const RULE_TYPES: { value: RuleType; label: string; description: string }[] = [
   {
-    value: 'PERCENTAGE_SPLIT',
-    label: 'Percentage Split',
-    description: 'Distribute cases among agents based on percentage allocation',
+    value: 'GEOGRAPHY',
+    label: 'Geography',
+    description: 'Matches cases to agents based on geographic location (state/city matching). Agent state and city fields must be set in user profile.',
   },
   {
     value: 'CAPACITY_BASED',
     label: 'Capacity Based',
-    description: 'Allocate based on agent capacity and current workload',
-  },
-  {
-    value: 'GEOGRAPHY',
-    label: 'Geography',
-    description: 'Allocate cases based on geographic region mapping',
+    description: 'Distributes ALL unallocated cases to ALL active agents based on workload capacity. Agents with fewer cases get priority.',
   },
 ]
 
-const DPD_BUCKETS = ['0-30', '30-60', '60-90', '90+']
-
-const GEOGRAPHIES = [
-  { code: 'MH_MUM', name: 'Mumbai, Maharashtra' },
-  { code: 'MH_PUN', name: 'Pune, Maharashtra' },
-  { code: 'KA_BLR', name: 'Bangalore, Karnataka' },
-  { code: 'TN_CHE', name: 'Chennai, Tamil Nadu' },
-  { code: 'DL_DEL', name: 'Delhi' },
-  { code: 'UP_NCR', name: 'NCR, Uttar Pradesh' },
-  { code: 'GJ_AMD', name: 'Ahmedabad, Gujarat' },
-  { code: 'WB_KOL', name: 'Kolkata, West Bengal' },
-]
+// Master data type constants for states and cities
+const MASTER_DATA_TYPES = {
+  STATE: 'STATE',
+  CITY: 'CITY',
+}
 
 interface FormData {
   name: string
   description: string
   ruleType: RuleType | ''
-  geographies: string[]
-  buckets: string[]
-  maxCasesPerAgent: number
-  agentIds: number[]
-  percentages: number[]
+  // Geography fields (required for GEOGRAPHY rule type only)
+  states: string[]
+  cities: string[]
   priority: number
 }
 
@@ -78,40 +77,75 @@ export function AllocationRuleWizard({
   const [currentStep, setCurrentStep] = useState<WizardStep>('basic')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [agents, setAgents] = useState<AgentWorkload[]>([])
-  const [isLoadingAgents, setIsLoadingAgents] = useState(false)
+
+  // Master data for states and cities
+  const [masterStates, setMasterStates] = useState<MasterData[]>([])
+  const [masterCities, setMasterCities] = useState<MasterData[]>([])
+  const [isLoadingMasterData, setIsLoadingMasterData] = useState(false)
+
+  // Dropdown open states
+  const [isStatesDropdownOpen, setIsStatesDropdownOpen] = useState(false)
+  const [isCitiesDropdownOpen, setIsCitiesDropdownOpen] = useState(false)
+  const [statesSearchTerm, setStatesSearchTerm] = useState('')
+  const [citiesSearchTerm, setCitiesSearchTerm] = useState('')
+
+  // Refs for click outside detection
+  const statesDropdownRef = useRef<HTMLDivElement>(null)
+  const citiesDropdownRef = useRef<HTMLDivElement>(null)
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
     ruleType: '',
-    geographies: [],
-    buckets: [],
-    maxCasesPerAgent: 50,
-    agentIds: [],
-    percentages: [],
+    states: [],
+    cities: [],
     priority: 1,
   })
 
-  // Fetch agents from API
+  // Get steps based on current rule type
+  const steps = getStepsForRuleType(formData.ruleType)
+
+  // Fetch master data for states and cities
   useEffect(() => {
-    const fetchAgents = async () => {
+    const fetchMasterData = async () => {
+      if (!isOpen) return
+
       try {
-        setIsLoadingAgents(true)
-        const workloadData = await allocationService.getAgentWorkload()
-        setAgents(workloadData)
+        setIsLoadingMasterData(true)
+        const [statesData, citiesData] = await Promise.all([
+          masterDataService.getByType(MASTER_DATA_TYPES.STATE),
+          masterDataService.getByType(MASTER_DATA_TYPES.CITY),
+        ])
+        // Filter only active entries and sort by displayOrder
+        setMasterStates(statesData.filter(s => s.isActive).sort((a, b) => a.displayOrder - b.displayOrder))
+        setMasterCities(citiesData.filter(c => c.isActive).sort((a, b) => a.displayOrder - b.displayOrder))
       } catch (err) {
-        console.error('Failed to fetch agents:', err)
-        setAgents([])
+        console.error('Failed to fetch master data:', err)
+        // Set empty arrays on error - UI will show appropriate message
+        setMasterStates([])
+        setMasterCities([])
       } finally {
-        setIsLoadingAgents(false)
+        setIsLoadingMasterData(false)
       }
     }
 
-    if (isOpen) {
-      fetchAgents()
-    }
+    fetchMasterData()
   }, [isOpen])
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (statesDropdownRef.current && !statesDropdownRef.current.contains(event.target as Node)) {
+        setIsStatesDropdownOpen(false)
+      }
+      if (citiesDropdownRef.current && !citiesDropdownRef.current.contains(event.target as Node)) {
+        setIsCitiesDropdownOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Initialize form with edit data
   useEffect(() => {
@@ -120,11 +154,8 @@ export function AllocationRuleWizard({
         name: editRule.name,
         description: editRule.description || '',
         ruleType: editRule.ruleType,
-        geographies: editRule.geographies,
-        buckets: editRule.buckets || [],
-        maxCasesPerAgent: editRule.maxCasesPerAgent || 50,
-        agentIds: editRule.agentIds || [],
-        percentages: editRule.percentages || [],
+        states: editRule.states || [],
+        cities: editRule.cities || [],
         priority: editRule.priority,
       })
     } else {
@@ -132,11 +163,8 @@ export function AllocationRuleWizard({
         name: '',
         description: '',
         ruleType: '',
-        geographies: [],
-        buckets: [],
-        maxCasesPerAgent: 50,
-        agentIds: [],
-        percentages: [],
+        states: [],
+        cities: [],
         priority: 1,
       })
     }
@@ -144,19 +172,19 @@ export function AllocationRuleWizard({
     setError('')
   }, [editRule, isOpen])
 
-  const getCurrentStepIndex = () => STEPS.findIndex((s) => s.key === currentStep)
+  const getCurrentStepIndex = () => steps.findIndex((s) => s.key === currentStep)
 
   const goToNextStep = () => {
     const currentIndex = getCurrentStepIndex()
-    if (currentIndex < STEPS.length - 1) {
-      setCurrentStep(STEPS[currentIndex + 1].key)
+    if (currentIndex < steps.length - 1) {
+      setCurrentStep(steps[currentIndex + 1].key)
     }
   }
 
   const goToPrevStep = () => {
     const currentIndex = getCurrentStepIndex()
     if (currentIndex > 0) {
-      setCurrentStep(STEPS[currentIndex - 1].key)
+      setCurrentStep(steps[currentIndex - 1].key)
     }
   }
 
@@ -175,20 +203,11 @@ export function AllocationRuleWizard({
         }
         break
       case 'geography':
-        if (formData.geographies.length === 0) {
-          setError('Please select at least one geography')
-          return false
-        }
-        break
-      case 'agents':
-        if (formData.agentIds.length === 0) {
-          setError('Please select at least one agent')
-          return false
-        }
-        if (formData.ruleType === 'PERCENTAGE_SPLIT') {
-          const totalPercentage = formData.percentages.reduce((sum, p) => sum + p, 0)
-          if (totalPercentage !== 100) {
-            setError('Percentages must add up to 100%')
+        // For GEOGRAPHY rule type, at least one geography filter (states or cities) is required
+        if (formData.ruleType === 'GEOGRAPHY') {
+          const hasGeographyFilter = formData.states.length > 0 || formData.cities.length > 0
+          if (!hasGeographyFilter) {
+            setError('Please select at least one state or city')
             return false
           }
         }
@@ -211,16 +230,23 @@ export function AllocationRuleWizard({
       setIsSubmitting(true)
       setError('')
 
+      // Build rule data based on rule type
       const ruleData: AllocationRuleCreate = {
         name: formData.name,
         description: formData.description || undefined,
         ruleType: formData.ruleType as RuleType,
-        geographies: formData.geographies,
-        buckets: formData.buckets.length > 0 ? formData.buckets : undefined,
-        maxCasesPerAgent: formData.maxCasesPerAgent,
-        agentIds: formData.agentIds,
-        percentages: formData.ruleType === 'PERCENTAGE_SPLIT' ? formData.percentages : undefined,
         priority: formData.priority,
+      }
+
+      // For GEOGRAPHY rule type, include states and cities
+      // For CAPACITY_BASED, no geography fields needed (allocates ALL cases to ALL agents)
+      if (formData.ruleType === 'GEOGRAPHY') {
+        if (formData.states.length > 0) {
+          ruleData.states = formData.states
+        }
+        if (formData.cities.length > 0) {
+          ruleData.cities = formData.cities
+        }
       }
 
       if (editRule) {
@@ -237,65 +263,39 @@ export function AllocationRuleWizard({
     }
   }
 
-  const toggleGeography = (code: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      geographies: prev.geographies.includes(code)
-        ? prev.geographies.filter((g) => g !== code)
-        : [...prev.geographies, code],
-    }))
-  }
-
-  const toggleBucket = (bucket: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      buckets: prev.buckets.includes(bucket)
-        ? prev.buckets.filter((b) => b !== bucket)
-        : [...prev.buckets, bucket],
-    }))
-  }
-
-  const toggleAgent = (agentId: number) => {
-    setFormData((prev) => {
-      const isSelected = prev.agentIds.includes(agentId)
-      if (isSelected) {
-        const index = prev.agentIds.indexOf(agentId)
-        return {
-          ...prev,
-          agentIds: prev.agentIds.filter((id) => id !== agentId),
-          percentages: prev.percentages.filter((_, i) => i !== index),
-        }
-      } else {
-        return {
-          ...prev,
-          agentIds: [...prev.agentIds, agentId],
-          percentages: [...prev.percentages, 0],
-        }
-      }
-    })
-  }
-
-  const updatePercentage = (index: number, value: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      percentages: prev.percentages.map((p, i) => (i === index ? value : p)),
-    }))
-  }
-
-  const distributeEvenly = () => {
-    const count = formData.agentIds.length
-    if (count === 0) return
-    const evenShare = Math.floor(100 / count)
-    const remainder = 100 - evenShare * count
-    setFormData((prev) => ({
-      ...prev,
-      percentages: prev.agentIds.map((_, i) => (i === 0 ? evenShare + remainder : evenShare)),
-    }))
-  }
-
   const getRuleTypeLabel = (type: string) => {
     return RULE_TYPES.find((t) => t.value === type)?.label || type
   }
+
+  // Toggle state selection
+  const toggleStateSelection = (stateValue: string) => {
+    setFormData(prev => ({
+      ...prev,
+      states: prev.states.includes(stateValue)
+        ? prev.states.filter(s => s !== stateValue)
+        : [...prev.states, stateValue]
+    }))
+  }
+
+  // Toggle city selection
+  const toggleCitySelection = (cityValue: string) => {
+    setFormData(prev => ({
+      ...prev,
+      cities: prev.cities.includes(cityValue)
+        ? prev.cities.filter(c => c !== cityValue)
+        : [...prev.cities, cityValue]
+    }))
+  }
+
+  // Filtered states based on search
+  const filteredStates = masterStates.filter(state =>
+    state.value.toLowerCase().includes(statesSearchTerm.toLowerCase())
+  )
+
+  // Filtered cities based on search
+  const filteredCities = masterCities.filter(city =>
+    city.value.toLowerCase().includes(citiesSearchTerm.toLowerCase())
+  )
 
   if (!isOpen) return null
 
@@ -316,7 +316,7 @@ export function AllocationRuleWizard({
 
         {/* Stepper */}
         <div className="wizard-stepper">
-          {STEPS.map((step, index) => (
+          {steps.map((step, index) => (
             <div
               key={step.key}
               className={`wizard-step ${currentStep === step.key ? 'wizard-step--active' : ''} ${
@@ -417,133 +417,225 @@ export function AllocationRuleWizard({
             </div>
           )}
 
-          {/* Step 3: Geography */}
+          {/* Step 3: Geography (only shown for GEOGRAPHY rule type) */}
           {currentStep === 'geography' && (
             <div className="wizard-step-content">
-              <h3>Select Geographies</h3>
-              <p>Choose the geographic regions this rule applies to</p>
+              <h3>Select Geographic Filters</h3>
+              <p>Choose states and/or cities to filter cases. Cases will be matched to agents based on their state/city profile.</p>
 
-              <div className="geography-grid">
-                {GEOGRAPHIES.map((geo) => (
-                  <button
-                    key={geo.code}
-                    className={`geography-card ${formData.geographies.includes(geo.code) ? 'geography-card--selected' : ''}`}
-                    onClick={() => toggleGeography(geo.code)}
-                  >
-                    <span className="geography-card__code">{geo.code}</span>
-                    <span className="geography-card__name">{geo.name}</span>
-                    {formData.geographies.includes(geo.code) && (
-                      <svg className="geography-card__check" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">DPD Buckets (Optional)</label>
-                <div className="bucket-options">
-                  {DPD_BUCKETS.map((bucket) => (
-                    <button
-                      key={bucket}
-                      className={`bucket-btn ${formData.buckets.includes(bucket) ? 'bucket-btn--selected' : ''}`}
-                      onClick={() => toggleBucket(bucket)}
-                    >
-                      {bucket}
-                    </button>
-                  ))}
+              {isLoadingMasterData ? (
+                <div className="loading-container">
+                  <div className="spinner"></div>
+                  <span>Loading geography options...</span>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 4: Agents */}
-          {currentStep === 'agents' && (
-            <div className="wizard-step-content">
-              <h3>Assign Agents</h3>
-              <p>Select agents and configure allocation settings</p>
-
-              <div className="form-group">
-                <label className="form-label">Max Cases Per Agent</label>
-                <input
-                  type="number"
-                  className="form-input form-input--small"
-                  min={1}
-                  max={500}
-                  value={formData.maxCasesPerAgent}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, maxCasesPerAgent: parseInt(e.target.value) || 50 }))}
-                />
-              </div>
-
-              <div className="agents-section">
-                <div className="agents-section__header">
-                  <label className="form-label">Select Agents *</label>
-                  {formData.ruleType === 'PERCENTAGE_SPLIT' && formData.agentIds.length > 0 && (
-                    <button className="btn-link" onClick={distributeEvenly}>
-                      Distribute Evenly
-                    </button>
-                  )}
-                </div>
-
-                {isLoadingAgents ? (
-                  <div className="agents-loading">Loading agents...</div>
-                ) : agents.length === 0 ? (
-                  <div className="agents-empty">No agents found</div>
-                ) : (
-                  <div className="agent-list">
-                    {agents.map((agent) => (
-                      <div
-                        key={agent.agentId}
-                        className={`agent-card ${formData.agentIds.includes(agent.agentId) ? 'agent-card--selected' : ''}`}
-                      >
-                        <div className="agent-card__main" onClick={() => toggleAgent(agent.agentId)}>
-                          <div className="agent-card__checkbox">
-                            {formData.agentIds.includes(agent.agentId) && (
-                              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
-                            )}
-                          </div>
-                          <div className="agent-card__info">
-                            <span className="agent-card__name">{agent.agentName}</span>
-                            <span className="agent-card__meta">
-                              {agent.geography} | Capacity: {agent.capacity} | Available: {agent.availableCapacity}
-                            </span>
-                          </div>
+              ) : (
+                <>
+                  {/* States Dropdown */}
+                  <div className="form-group">
+                    <label className="form-label">States *</label>
+                    <p className="form-hint">Select one or more states (at least one state or city is required)</p>
+                    {masterStates.length === 0 ? (
+                      <div className="empty-master-data">
+                        No states found in master data. Please add states in Master Data management.
+                      </div>
+                    ) : (
+                      <div className="custom-dropdown" ref={statesDropdownRef}>
+                        <div
+                          className={`custom-dropdown__trigger ${isStatesDropdownOpen ? 'custom-dropdown__trigger--open' : ''}`}
+                          onClick={() => {
+                            setIsStatesDropdownOpen(!isStatesDropdownOpen)
+                            setIsCitiesDropdownOpen(false)
+                          }}
+                        >
+                          <span className="custom-dropdown__placeholder">
+                            {formData.states.length > 0
+                              ? `${formData.states.length} state${formData.states.length > 1 ? 's' : ''} selected`
+                              : 'Select states...'}
+                          </span>
+                          <svg className="custom-dropdown__arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
                         </div>
-                        {formData.ruleType === 'PERCENTAGE_SPLIT' && formData.agentIds.includes(agent.agentId) && (
-                          <div className="agent-card__percentage">
-                            <input
-                              type="number"
-                              className="percentage-input"
-                              min={0}
-                              max={100}
-                              value={formData.percentages[formData.agentIds.indexOf(agent.agentId)] || 0}
-                              onChange={(e) => updatePercentage(formData.agentIds.indexOf(agent.agentId), parseInt(e.target.value) || 0)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            <span>%</span>
+                        {isStatesDropdownOpen && (
+                          <div className="custom-dropdown__menu">
+                            <div className="custom-dropdown__search">
+                              <input
+                                type="text"
+                                placeholder="Search states..."
+                                value={statesSearchTerm}
+                                onChange={(e) => setStatesSearchTerm(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                            <div className="custom-dropdown__list">
+                              {filteredStates.length === 0 ? (
+                                <div className="custom-dropdown__empty">No states found</div>
+                              ) : (
+                                filteredStates.map((state) => (
+                                  <div
+                                    key={state.id}
+                                    className={`custom-dropdown__item ${formData.states.includes(state.value) ? 'custom-dropdown__item--selected' : ''}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      toggleStateSelection(state.value)
+                                    }}
+                                  >
+                                    <span className="custom-dropdown__checkbox">
+                                      {formData.states.includes(state.value) && (
+                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                          <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                        </svg>
+                                      )}
+                                    </span>
+                                    <span className="custom-dropdown__label">{state.value}</span>
+                                  </div>
+                                ))
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
-                    ))}
-                  </div>
-                )}
-
-                {formData.ruleType === 'PERCENTAGE_SPLIT' && formData.agentIds.length > 0 && (
-                  <div className="percentage-total">
-                    Total: {formData.percentages.reduce((sum, p) => sum + p, 0)}%
-                    {formData.percentages.reduce((sum, p) => sum + p, 0) !== 100 && (
-                      <span className="percentage-total--error"> (must equal 100%)</span>
+                    )}
+                    {formData.states.length > 0 && (
+                      <div className="selected-tags">
+                        {formData.states.map((state) => (
+                          <span key={state} className="selected-tag">
+                            {state}
+                            <button
+                              type="button"
+                              className="selected-tag__remove"
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                states: prev.states.filter(s => s !== state)
+                              }))}
+                            >
+                              &times;
+                            </button>
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
+
+                  {/* Cities Dropdown */}
+                  <div className="form-group">
+                    <label className="form-label">Cities</label>
+                    <p className="form-hint">Select specific cities (optional if states are selected)</p>
+                    {masterCities.length === 0 ? (
+                      <div className="empty-master-data">
+                        No cities found in master data. Please add cities in Master Data management.
+                      </div>
+                    ) : (
+                      <div className="custom-dropdown" ref={citiesDropdownRef}>
+                        <div
+                          className={`custom-dropdown__trigger ${isCitiesDropdownOpen ? 'custom-dropdown__trigger--open' : ''}`}
+                          onClick={() => {
+                            setIsCitiesDropdownOpen(!isCitiesDropdownOpen)
+                            setIsStatesDropdownOpen(false)
+                          }}
+                        >
+                          <span className="custom-dropdown__placeholder">
+                            {formData.cities.length > 0
+                              ? `${formData.cities.length} cit${formData.cities.length > 1 ? 'ies' : 'y'} selected`
+                              : 'Select cities...'}
+                          </span>
+                          <svg className="custom-dropdown__arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
+                        {isCitiesDropdownOpen && (
+                          <div className="custom-dropdown__menu">
+                            <div className="custom-dropdown__search">
+                              <input
+                                type="text"
+                                placeholder="Search cities..."
+                                value={citiesSearchTerm}
+                                onChange={(e) => setCitiesSearchTerm(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                            <div className="custom-dropdown__list">
+                              {filteredCities.length === 0 ? (
+                                <div className="custom-dropdown__empty">No cities found</div>
+                              ) : (
+                                filteredCities.map((city) => (
+                                  <div
+                                    key={city.id}
+                                    className={`custom-dropdown__item ${formData.cities.includes(city.value) ? 'custom-dropdown__item--selected' : ''}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      toggleCitySelection(city.value)
+                                    }}
+                                  >
+                                    <span className="custom-dropdown__checkbox">
+                                      {formData.cities.includes(city.value) && (
+                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                          <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                        </svg>
+                                      )}
+                                    </span>
+                                    <span className="custom-dropdown__label">{city.value}</span>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {formData.cities.length > 0 && (
+                      <div className="selected-tags">
+                        {formData.cities.map((city) => (
+                          <span key={city} className="selected-tag">
+                            {city}
+                            <button
+                              type="button"
+                              className="selected-tag__remove"
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                cities: prev.cities.filter(c => c !== city)
+                              }))}
+                            >
+                              &times;
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Selection Summary */}
+                  {(formData.states.length > 0 || formData.cities.length > 0) && (
+                    <div className="geography-summary">
+                      <span className="geography-summary__label">Selected:</span>
+                      {formData.states.length > 0 && (
+                        <span className="geography-summary__item">
+                          {formData.states.length} state{formData.states.length > 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {formData.cities.length > 0 && (
+                        <span className="geography-summary__item">
+                          {formData.cities.length} cit{formData.cities.length > 1 ? 'ies' : 'y'}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Info box about how geography matching works */}
+                  <div className="geography-info">
+                    <strong>How Geography Matching Works:</strong>
+                    <ul>
+                      <li>Cases are filtered by the selected state/city (case-insensitive matching)</li>
+                      <li>Agents are auto-detected based on their state/city profile settings</li>
+                      <li>Cases are distributed using workload equalization (agents with fewer cases get more)</li>
+                    </ul>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
-          {/* Step 5: Review */}
+          {/* Review Step */}
           {currentStep === 'review' && (
             <div className="wizard-step-content">
               <h3>Review & Confirm</h3>
@@ -568,29 +660,32 @@ export function AllocationRuleWizard({
                   <span className="review-item__label">Priority</span>
                   <span className="review-item__value">{formData.priority}</span>
                 </div>
-                <div className="review-item">
-                  <span className="review-item__label">Geographies</span>
-                  <span className="review-item__value">{formData.geographies.join(', ')}</span>
-                </div>
-                {formData.buckets.length > 0 && (
+                {formData.ruleType === 'GEOGRAPHY' && formData.states.length > 0 && (
                   <div className="review-item">
-                    <span className="review-item__label">DPD Buckets</span>
-                    <span className="review-item__value">{formData.buckets.join(', ')}</span>
+                    <span className="review-item__label">States</span>
+                    <span className="review-item__value">{formData.states.join(', ')}</span>
                   </div>
                 )}
-                <div className="review-item">
-                  <span className="review-item__label">Max Cases/Agent</span>
-                  <span className="review-item__value">{formData.maxCasesPerAgent}</span>
-                </div>
-                <div className="review-item">
-                  <span className="review-item__label">Agents</span>
-                  <span className="review-item__value">
-                    {formData.agentIds.map((id, i) => {
-                      const agent = agents.find((a) => a.agentId === id)
-                      const percentage = formData.ruleType === 'PERCENTAGE_SPLIT' ? ` (${formData.percentages[i]}%)` : ''
-                      return agent ? `${agent.agentName}${percentage}` : id
-                    }).join(', ')}
-                  </span>
+                {formData.ruleType === 'GEOGRAPHY' && formData.cities.length > 0 && (
+                  <div className="review-item">
+                    <span className="review-item__label">Cities</span>
+                    <span className="review-item__value">{formData.cities.join(', ')}</span>
+                  </div>
+                )}
+
+                {/* Info about how allocation will work */}
+                <div className="review-info">
+                  {formData.ruleType === 'GEOGRAPHY' ? (
+                    <>
+                      <strong>How this rule will work:</strong>
+                      <p>When applied, this rule will find all unallocated cases matching the selected geography and distribute them to agents whose profile matches the same geography.</p>
+                    </>
+                  ) : (
+                    <>
+                      <strong>How this rule will work:</strong>
+                      <p>When applied, this rule will distribute ALL unallocated cases to ALL active agents based on their current workload capacity. Agents with fewer cases will get priority.</p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

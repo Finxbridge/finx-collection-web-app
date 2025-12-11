@@ -1,21 +1,17 @@
 /**
  * Allocation Upload Page
- * Upload CSV files for bulk case allocation
+ * Upload CSV files for bulk case allocation with batch history
  */
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { allocationService, reallocationService } from '@services/api'
-import type { AllocationBatchUploadResponse, AllocationBatchStatusResponse } from '@types'
+import { allocationService } from '@services/api'
+import type { AllocationBatchUploadResponse, AllocationBatchStatusResponse, AllocationBatch } from '@types'
 import './AllocationUploadPage.css'
-
-type UploadType = 'allocation' | 'reallocation' | 'contact'
 
 export function AllocationUploadPage() {
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const [uploadType, setUploadType] = useState<UploadType>('allocation')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
@@ -23,6 +19,36 @@ export function AllocationUploadPage() {
   const [batchStatus, setBatchStatus] = useState<AllocationBatchStatusResponse | null>(null)
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+
+  // Batches list state
+  const [batches, setBatches] = useState<AllocationBatch[]>([])
+  const [isLoadingBatches, setIsLoadingBatches] = useState(true)
+  const [statusFilter, setStatusFilter] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+
+  // Fetch batches list
+  const fetchBatches = useCallback(async () => {
+    try {
+      setIsLoadingBatches(true)
+      const data = await allocationService.getBatches({
+        status: statusFilter || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        page: 0,
+        size: 50,
+      })
+      setBatches(data)
+    } catch (err) {
+      console.error('Failed to fetch batches:', err)
+    } finally {
+      setIsLoadingBatches(false)
+    }
+  }, [statusFilter, startDate, endDate])
+
+  useEffect(() => {
+    fetchBatches()
+  }, [fetchBatches])
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -62,19 +88,8 @@ export function AllocationUploadPage() {
       setIsDownloading(true)
       setError('')
 
-      let blob: Blob
-      let filename: string
-
-      if (uploadType === 'allocation') {
-        blob = await allocationService.downloadTemplate(true)
-        filename = 'allocation_template.csv'
-      } else if (uploadType === 'reallocation') {
-        blob = await allocationService.downloadTemplate(true)
-        filename = 'reallocation_template.csv'
-      } else {
-        blob = await allocationService.downloadContactTemplate(true)
-        filename = 'contact_update_template.csv'
-      }
+      const blob = await allocationService.downloadTemplate(true)
+      const filename = 'allocation_template.csv'
 
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -99,15 +114,7 @@ export function AllocationUploadPage() {
       setError('')
       setSuccessMessage('')
 
-      let result: AllocationBatchUploadResponse
-
-      if (uploadType === 'allocation') {
-        result = await allocationService.uploadBatch(selectedFile)
-      } else if (uploadType === 'reallocation') {
-        result = await reallocationService.uploadBatch(selectedFile)
-      } else {
-        result = await allocationService.uploadContactBatch(selectedFile)
-      }
+      const result = await allocationService.uploadBatch(selectedFile)
 
       setUploadResult(result)
       setSuccessMessage('File uploaded successfully! Processing in progress...')
@@ -124,15 +131,7 @@ export function AllocationUploadPage() {
   const pollBatchStatus = async (batchId: string) => {
     const checkStatus = async () => {
       try {
-        let status: AllocationBatchStatusResponse
-
-        if (uploadType === 'allocation') {
-          status = await allocationService.getBatchStatus(batchId)
-        } else if (uploadType === 'reallocation') {
-          status = await reallocationService.getBatchStatus(batchId)
-        } else {
-          status = await allocationService.getContactBatchStatus(batchId) as unknown as AllocationBatchStatusResponse
-        }
+        const status = await allocationService.getBatchStatus(batchId)
 
         setBatchStatus(status)
 
@@ -140,8 +139,10 @@ export function AllocationUploadPage() {
           setTimeout(checkStatus, 2000)
         } else if (status.status === 'COMPLETED') {
           setSuccessMessage(`Processing complete! ${status.successful} of ${status.totalCases} records successful.`)
+          fetchBatches() // Refresh batches list
         } else if (status.status === 'FAILED') {
           setError('Batch processing failed')
+          fetchBatches() // Refresh batches list
         }
       } catch (err) {
         console.error('Failed to fetch batch status:', err)
@@ -155,20 +156,12 @@ export function AllocationUploadPage() {
     if (!uploadResult) return
 
     try {
-      let blob: Blob
-
-      if (uploadType === 'allocation') {
-        blob = await allocationService.exportFailedRows(uploadResult.batchId)
-      } else if (uploadType === 'reallocation') {
-        blob = await reallocationService.exportFailedRows(uploadResult.batchId)
-      } else {
-        blob = await allocationService.exportFailedContactRows(uploadResult.batchId)
-      }
+      const blob = await allocationService.exportFailedRows(uploadResult.batchId)
 
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `failed_${uploadType}_${uploadResult.batchId}.csv`
+      a.download = `failed_allocation_${uploadResult.batchId}.csv`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
@@ -204,6 +197,61 @@ export function AllocationUploadPage() {
     }
   }
 
+  const getBatchTypeBadgeClass = (type: string) => {
+    switch (type) {
+      case 'ALLOCATION':
+        return 'badge--blue'
+      case 'REALLOCATION':
+        return 'badge--purple'
+      case 'CONTACT_UPDATE':
+        return 'badge--green'
+      default:
+        return 'badge--default'
+    }
+  }
+
+  const formatDateTime = (dateStr: string): string => {
+    return new Date(dateStr).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
+  const handleExportBatch = async (batchId: string) => {
+    try {
+      const blob = await allocationService.exportBatch(batchId)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `allocations_${batchId}.csv`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export batch')
+    }
+  }
+
+  const handleExportBatchErrors = async (batchId: string) => {
+    try {
+      const blob = await allocationService.exportFailedRows(batchId)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `failed_${batchId}.csv`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export errors')
+    }
+  }
+
   return (
     <div className="upload-page">
       {/* Header */}
@@ -215,9 +263,9 @@ export function AllocationUploadPage() {
           Back to Allocation
         </button>
         <div className="upload-header__content">
-          <h1 className="upload-title">Upload Batch</h1>
+          <h1 className="upload-title">Upload Allocation Batch</h1>
           <p className="upload-subtitle">
-            Upload CSV files for bulk allocation, reallocation, or contact updates
+            Upload CSV files for bulk case allocation
           </p>
         </div>
       </div>
@@ -236,46 +284,11 @@ export function AllocationUploadPage() {
         </div>
       )}
 
-      {/* Upload Type Selection */}
-      <div className="upload-type-selector">
-        <button
-          className={`upload-type-btn ${uploadType === 'allocation' ? 'upload-type-btn--active' : ''}`}
-          onClick={() => { setUploadType('allocation'); resetUpload(); }}
-        >
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
-          </svg>
-          Allocation
-        </button>
-        <button
-          className={`upload-type-btn ${uploadType === 'reallocation' ? 'upload-type-btn--active' : ''}`}
-          onClick={() => { setUploadType('reallocation'); resetUpload(); }}
-        >
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17 1L21 5L17 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M3 11V9C3 7.93913 3.42143 6.92172 4.17157 6.17157C4.92172 5.42143 5.93913 5 7 5H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M7 23L3 19L7 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M21 13V15C21 16.0609 20.5786 17.0783 19.8284 17.8284C19.0783 18.5786 18.0609 19 17 19H3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          Reallocation
-        </button>
-        <button
-          className={`upload-type-btn ${uploadType === 'contact' ? 'upload-type-btn--active' : ''}`}
-          onClick={() => { setUploadType('contact'); resetUpload(); }}
-        >
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M22 16.92V19.92C22.0011 20.4832 21.7723 21.0234 21.3654 21.4292C20.9586 21.8351 20.4086 22.0754 19.83 22.09C16.7429 21.7679 13.787 20.7264 11.19 19.05C8.77383 17.5384 6.72534 15.4899 5.21366 13.0737C3.53009 10.4626 2.48834 7.4896 2.17 4.38631C2.15528 3.80889 2.3949 3.25988 2.80078 2.85376C3.20666 2.44764 3.74732 2.21921 4.31 2.22001H7.31C8.30649 2.21001 9.16098 2.87932 9.43 3.83001C9.66355 4.66031 9.98738 5.46253 10.39 6.22001C10.6706 6.7648 10.5396 7.43832 10.07 7.82001L8.82 9.07001C10.2265 11.5672 12.4328 13.7735 14.93 15.18L16.18 13.93C16.5617 13.4604 17.2352 13.3294 17.78 13.61C18.5375 14.0126 19.3397 14.3365 20.17 14.57C21.1318 14.8428 21.8038 15.7118 21.78 16.7233V16.92H22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          Contact Update
-        </button>
-      </div>
-
       {/* Upload Card */}
       <div className="upload-card">
         <div className="upload-card__header">
           <h2 className="upload-card__title">
-            Upload {uploadType === 'allocation' ? 'Allocation' : uploadType === 'reallocation' ? 'Reallocation' : 'Contact Update'} File
+            Upload Allocation File
           </h2>
           <button
             className="btn-download-template"
@@ -448,31 +461,136 @@ export function AllocationUploadPage() {
       <div className="instructions-card">
         <h3 className="instructions-card__title">Instructions</h3>
         <ul className="instructions-list">
-          {uploadType === 'allocation' && (
-            <>
-              <li>Download the template to see the required format</li>
-              <li>Fill in case_id, primary_agent_id, and optionally secondary_agent_id</li>
-              <li>Save the file as CSV format</li>
-              <li>Upload the file and wait for processing to complete</li>
-            </>
-          )}
-          {uploadType === 'reallocation' && (
-            <>
-              <li>Download the template to see the required format</li>
-              <li>Specify case_id and the new agent_id to reallocate to</li>
-              <li>Optionally include a reason for reallocation</li>
-              <li>Upload the file and wait for processing to complete</li>
-            </>
-          )}
-          {uploadType === 'contact' && (
-            <>
-              <li>Download the template for contact updates</li>
-              <li>Include case_id and the fields to update (mobile, email, address)</li>
-              <li>Save the file as CSV format</li>
-              <li>Upload the file and wait for processing to complete</li>
-            </>
-          )}
+          <li>Download the template to see the required format</li>
+          <li>Fill in case_id, primary_agent_id, and optionally secondary_agent_id</li>
+          <li>Save the file as CSV format</li>
+          <li>Upload the file and wait for processing to complete</li>
         </ul>
+      </div>
+
+      {/* Batch History */}
+      <div className="batches-section">
+        <div className="batches-section__header">
+          <h2 className="batches-section__title">Batch History</h2>
+        </div>
+
+        {/* Filters */}
+        <div className="batches-filters">
+          <select
+            className="filter-select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">All Statuses</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="PROCESSING">Processing</option>
+            <option value="FAILED">Failed</option>
+            <option value="PARTIAL">Partial</option>
+          </select>
+          <input
+            type="date"
+            className="filter-input"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            placeholder="Start Date"
+          />
+          <input
+            type="date"
+            className="filter-input"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            placeholder="End Date"
+          />
+          <button className="btn-secondary btn-filter" onClick={fetchBatches}>
+            Apply Filters
+          </button>
+        </div>
+
+        {/* Batches Table */}
+        {isLoadingBatches ? (
+          <div className="loading-container">
+            <div className="spinner"></div>
+            <span>Loading batches...</span>
+          </div>
+        ) : batches.length === 0 ? (
+          <div className="empty-state">
+            <h3>No batches found</h3>
+            <p>No batches match your filter criteria</p>
+          </div>
+        ) : (
+          <div className="batches-table-container">
+            <table className="batches-table">
+              <thead>
+                <tr>
+                  <th>Batch ID</th>
+                  <th>Type</th>
+                  <th>Total</th>
+                  <th>Success</th>
+                  <th>Failed</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {batches.map((batch) => (
+                  <tr key={batch.batchId}>
+                    <td className="batch-id">{batch.batchId.substring(0, 12)}...</td>
+                    <td>
+                      <span className={`badge ${getBatchTypeBadgeClass(batch.batchType)}`}>
+                        {batch.batchType}
+                      </span>
+                    </td>
+                    <td>{batch.totalCases}</td>
+                    <td className="text-success">{batch.successful}</td>
+                    <td className="text-danger">{batch.failed}</td>
+                    <td>
+                      <span className={`badge ${getStatusBadgeClass(batch.status)}`}>
+                        {batch.status}
+                      </span>
+                    </td>
+                    <td>{formatDateTime(batch.createdAt)}</td>
+                    <td>
+                      <div className="table-actions">
+                        <button
+                          className="btn-icon"
+                          onClick={() => handleExportBatch(batch.batchId)}
+                          title="Export"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <polyline points="7 10 12 15 17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </button>
+                        {batch.failed > 0 && (
+                          <button
+                            className="btn-icon btn-icon--danger"
+                            onClick={() => handleExportBatchErrors(batch.batchId)}
+                            title="Export Errors"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </button>
+                        )}
+                        <button
+                          className="btn-icon"
+                          onClick={() => navigate(`/allocation/failure-analysis?batchId=${batch.batchId}`)}
+                          title="Analyze"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M18 20V10M12 20V4M6 20V14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )

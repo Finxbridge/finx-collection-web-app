@@ -1,47 +1,48 @@
 /**
- * User Detail Page
- * Displays detailed information about a single user
+ * Profile Page
+ * Displays the logged-in user's profile information
  */
 
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { userManagementService } from '@services/api'
+import { useAuth } from '@hooks'
 import { Button } from '@components/common/Button'
 import type { User } from '@types'
 import { ROUTES } from '@config/constants'
-import './UserDetailPage.css'
+import './ProfilePage.css'
 
-export function UserDetailPage() {
-  const { id } = useParams<{ id: string }>()
+export function ProfilePage() {
   const navigate = useNavigate()
+  const { user: authUser } = useAuth()
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const fetchUser = async () => {
-      if (!id) {
-        setError('User ID is required')
+    const fetchUserProfile = async () => {
+      if (!authUser?.id) {
+        setError('User not authenticated')
         setIsLoading(false)
         return
       }
 
       try {
         setIsLoading(true)
-        const userData = await userManagementService.getById(parseInt(id))
+        const userData = await userManagementService.getById(authUser.id)
         setUser(userData)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch user details')
+        setError(err instanceof Error ? err.message : 'Failed to fetch profile details')
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchUser()
-  }, [id])
+    fetchUserProfile()
+  }, [authUser?.id])
 
   const handleBack = () => {
-    navigate(ROUTES.USERS)
+    navigate(ROUTES.DASHBOARD)
   }
 
   const formatDate = (dateString?: string) => {
@@ -57,10 +58,10 @@ export function UserDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="user-detail-page">
+      <div className="profile-page">
         <div className="loading-state">
           <div className="loading-spinner"></div>
-          <p>Loading user details...</p>
+          <p>Loading profile...</p>
         </div>
       </div>
     )
@@ -68,15 +69,15 @@ export function UserDetailPage() {
 
   if (error) {
     return (
-      <div className="user-detail-page">
+      <div className="profile-page">
         <div className="error-state">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
             <path d="M12 8V12M12 16H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
-          <h3>Error Loading User</h3>
+          <h3>Error Loading Profile</h3>
           <p>{error}</p>
-          <Button onClick={handleBack}>Back to Users</Button>
+          <Button onClick={handleBack}>Back to Dashboard</Button>
         </div>
       </div>
     )
@@ -84,32 +85,26 @@ export function UserDetailPage() {
 
   if (!user) {
     return (
-      <div className="user-detail-page">
+      <div className="profile-page">
         <div className="error-state">
-          <h3>User Not Found</h3>
-          <p>The requested user could not be found.</p>
-          <Button onClick={handleBack}>Back to Users</Button>
+          <h3>Profile Not Found</h3>
+          <p>Your profile could not be loaded.</p>
+          <Button onClick={handleBack}>Back to Dashboard</Button>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="user-detail-page">
+    <div className="profile-page">
       <div className="page-header">
-        <button className="back-button" onClick={handleBack}>
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Back to Users
-        </button>
         <div className="page-header__content">
-          <h1 className="page-title">User Details</h1>
-          <p className="page-subtitle">View detailed information about this user</p>
+          <h1 className="page-title">My Profile</h1>
+          <p className="page-subtitle">View your account information</p>
         </div>
       </div>
 
-      <div className="user-detail-content">
+      <div className="profile-content">
         {/* User Header Card */}
         <div className="detail-card user-header-card">
           <div className="user-header">
@@ -151,8 +146,12 @@ export function UserDetailPage() {
               <span className="info-value">{user.mobileNumber || 'N/A'}</span>
             </div>
             <div className="info-item">
-              <span className="info-label">First Login</span>
-              <span className="info-value">{user.isFirstLogin ? 'Yes' : 'No'}</span>
+              <span className="info-label">City</span>
+              <span className="info-value">{user.city || 'N/A'}</span>
+            </div>
+            <div className="info-item">
+              <span className="info-label">State</span>
+              <span className="info-value">{user.state || 'N/A'}</span>
             </div>
           </div>
         </div>
@@ -173,21 +172,6 @@ export function UserDetailPage() {
               <span className="info-label">Allocation Percentage</span>
               <span className="info-value">{user.allocationPercentage ?? 0}%</span>
             </div>
-          </div>
-        </div>
-
-        {/* Assigned Geographies */}
-        <div className="detail-card">
-          <h3 className="card-title">Assigned Geographies</h3>
-          <div className="tags-container">
-            {(user.state || user.city) ? (
-              <>
-                {user.state && <span className="geography-tag">{user.state}</span>}
-                {user.city && <span className="geography-tag">{user.city}</span>}
-              </>
-            ) : (
-              <span className="no-data">No geographies assigned</span>
-            )}
           </div>
         </div>
 
@@ -229,7 +213,7 @@ export function UserDetailPage() {
           <h3 className="card-title">Activity</h3>
           <div className="info-grid">
             <div className="info-item">
-              <span className="info-label">Created At</span>
+              <span className="info-label">Account Created</span>
               <span className="info-value">{formatDate(user.createdAt)}</span>
             </div>
             <div className="info-item">
@@ -243,4 +227,4 @@ export function UserDetailPage() {
   )
 }
 
-export default UserDetailPage
+export default ProfilePage
