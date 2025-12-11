@@ -19,13 +19,23 @@ export interface MasterData {
 
 // Request to create/update master data
 export interface MasterDataRequest {
-  dataType: string
+  categoryType: string
   code: string
   value: string
-  parentCode?: string | null
   displayOrder?: number
   isActive?: boolean
-  metadata?: Record<string, unknown> | null
+}
+
+// Category item from /master-data/all API
+export interface MasterDataCategory {
+  categoryName: string
+  count: number
+  status: string
+}
+
+// Response from /master-data/all API
+export interface MasterDataCategoriesResponse {
+  categories: MasterDataCategory[]
 }
 
 // Bulk upload response
@@ -58,11 +68,9 @@ export type MasterDataType =
 
 // Form data for creating/editing master data
 export interface MasterDataFormData {
-  dataType: string
+  categoryType: string
   code: string
   value: string
-  parentCode: string
   displayOrder: number
   isActive: boolean
-  metadata: string // JSON string for form input
 }

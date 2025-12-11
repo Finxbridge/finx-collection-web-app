@@ -39,10 +39,13 @@ export const ROUTES = {
   ALLOCATION: '/allocation',
   ALLOCATION_UPLOAD: '/allocation/upload',
   ALLOCATION_RULES: '/allocation/rules',
+  ALLOCATION_RULE_DETAIL: '/allocation/rules/:ruleId',
   ALLOCATION_WORKLOAD: '/allocation/workload',
   ALLOCATION_REALLOCATION: '/allocation/reallocation',
   ALLOCATION_BATCHES: '/allocation/batches',
-  ALLOCATION_FAILURE_ANALYSIS: '/allocation/failure-analysis',
+  ALLOCATION_BATCH_DETAIL: '/allocation/batch/:batchId',
+  REALLOCATION_BATCH_DETAIL: '/allocation/reallocation/batch/:batchId',
+  ALLOCATED_CASES: '/allocation/cases',
   NOT_FOUND: '*',
 } as const
 
@@ -101,13 +104,14 @@ export const API_ENDPOINTS = {
   MASTER_DATA: {
     LIST: '/master-data',
     GET_BY_TYPE: '/master-data',
-    CREATE: '/master-data',
+    CREATE: '/master-data/create',
     UPDATE: (id: number) => `/master-data/${id}`,
     DELETE: (id: number) => `/master-data/${id}`,
-    BULK_UPLOAD_V1: '/master-data/bulk-upload',
-    BULK_UPLOAD_V2: '/master-data/bulk-upload-v2',
-    TEMPLATE: '/master-data/template',
-    CATEGORIES: '/master-data/categories',
+    BULK_UPLOAD: '/master-data/bulk-upload',
+    BULK_UPLOAD_BY_TYPE: '/master-data/bulk-upload-by-type',
+    TEMPLATE: '/master-data/upload/template',
+    TEMPLATE_V2: '/master-data/upload/template-v2',
+    CATEGORIES: '/master-data/all',
   },
   // Case Sourcing endpoints
   CASE_SOURCING: {

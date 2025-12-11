@@ -10,7 +10,7 @@ import { ROUTES } from '@config/constants'
 import './TopBar.css'
 
 export function TopBar() {
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
@@ -19,6 +19,10 @@ export function TopBar() {
     await logout()
     navigate(ROUTES.LOGIN)
   }
+
+  // Get user display name and role dynamically
+  const displayName = user ? `${user.firstName} ${user.lastName}` : 'Guest User'
+  const userRole = user?.roles?.[0]?.displayName || user?.role || 'User'
 
   return (
     <header className="topbar">
@@ -195,8 +199,8 @@ export function TopBar() {
                 </svg>
               </div>
               <div className="topbar__user-info">
-                <div className="topbar__user-name">Admin User</div>
-                <div className="topbar__user-role">Administrator</div>
+                <div className="topbar__user-name">{displayName}</div>
+                <div className="topbar__user-role">{userRole}</div>
               </div>
               <svg
                 className="topbar__user-chevron"

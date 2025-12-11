@@ -62,7 +62,144 @@
   gap: 16px;
 }
 
-/* Rule Card */
+/* Rules Table Container */
+.rules-table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.rules-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rules-table thead {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.rules-table th {
+  padding: 14px 20px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rules-table th:last-child {
+  text-align: right;
+}
+
+.rules-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.15s;
+}
+
+.rules-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.rules-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.rules-table td {
+  padding: 16px 20px;
+  font-size: 14px;
+  color: #1a1a2e;
+  vertical-align: middle;
+}
+
+.rules-table td:last-child {
+  text-align: right;
+}
+
+/* Rule Name Link */
+.rule-name-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #2563eb;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s;
+}
+
+.rule-name-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+/* Rule Actions in Table */
+.rule-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Icon-only Action Buttons */
+.btn-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-action-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-action-icon.btn-action--simulate {
+  color: #7c3aed;
+  background: #ede9fe;
+}
+
+.btn-action-icon.btn-action--simulate:hover {
+  background: #ddd6fe;
+}
+
+.btn-action-icon.btn-action--apply {
+  color: #059669;
+  background: #d1fae5;
+}
+
+.btn-action-icon.btn-action--apply:hover {
+  background: #a7f3d0;
+}
+
+.btn-action-icon.btn-action--edit {
+  color: #2563eb;
+  background: #dbeafe;
+}
+
+.btn-action-icon.btn-action--edit:hover {
+  background: #bfdbfe;
+}
+
+.btn-action-icon.btn-action--delete {
+  color: #dc2626;
+  background: #fee2e2;
+}
+
+.btn-action-icon.btn-action--delete:hover {
+  background: #fecaca;
+}
+
+/* Legacy Rule Card styles - kept for potential future use */
 .rule-card {
   background: white;
   border-radius: 12px;
@@ -322,25 +459,28 @@
 .simulation-summary {
   display: flex;
   justify-content: center;
+  gap: 16px;
   margin-bottom: 24px;
 }
 
 .simulation-stat {
   text-align: center;
-  padding: 20px 40px;
+  padding: 20px 32px;
   background: #eff6ff;
   border-radius: 12px;
+  flex: 1;
+  max-width: 200px;
 }
 
 .simulation-stat__value {
   display: block;
-  font-size: 36px;
+  font-size: 32px;
   font-weight: 700;
   color: #2563eb;
 }
 
 .simulation-stat__label {
-  font-size: 14px;
+  font-size: 13px;
   color: #6b7280;
 }
 
@@ -356,6 +496,8 @@
   flex-direction: column;
   gap: 8px;
   margin-bottom: 24px;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .simulation-agent {
@@ -367,15 +509,28 @@
   border-radius: 8px;
 }
 
+.simulation-agent__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .simulation-agent__name {
   font-size: 14px;
   font-weight: 500;
   color: #1a1a2e;
 }
 
+.simulation-agent__meta {
+  font-size: 12px;
+  color: #6b7280;
+}
+
 .simulation-agent__count {
   font-size: 14px;
-  color: #6b7280;
+  font-weight: 600;
+  color: #2563eb;
+  white-space: nowrap;
 }
 
 .simulation-actions {

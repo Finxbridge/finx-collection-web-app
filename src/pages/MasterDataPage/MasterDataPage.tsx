@@ -8,7 +8,7 @@ import { masterDataService } from '@services/api'
 import { Table, Column } from '@components/common/Table'
 import { Modal } from '@components/common/Modal'
 import { Button } from '@components/common/Button'
-import type { MasterData, MasterDataRequest, BulkUploadResult, BulkUploadError } from '@types'
+import type { MasterData, MasterDataRequest, MasterDataCategory, BulkUploadResult, BulkUploadError } from '@types'
 import './MasterDataPage.css'
 
 // Type for category configuration
@@ -16,13 +16,15 @@ interface CategoryConfig {
   code: string
   label: string
   description: string
+  count: number
+  status: string
 }
 
 // Default master data types - these can be extended by user
 const DEFAULT_CATEGORIES: CategoryConfig[] = [
-  { code: 'BANK', label: 'Bank', description: 'Bank master data for financial institutions' },
-  { code: 'LANGUAGE', label: 'Language', description: 'Supported languages for communication' },
-  { code: 'DPD', label: 'DPD', description: 'Days Past Due buckets for loan classification' },
+  { code: 'BANK', label: 'Bank', description: 'Bank master data for financial institutions', count: 0, status: 'ACTIVE' },
+  { code: 'LANGUAGE', label: 'Language', description: 'Supported languages for communication', count: 0, status: 'ACTIVE' },
+  { code: 'DPD', label: 'DPD', description: 'Days Past Due buckets for loan classification', count: 0, status: 'ACTIVE' },
 ]
 
 export function MasterDataPage() {
@@ -52,32 +54,29 @@ export function MasterDataPage() {
 
   // Form state for edit
   const [formData, setFormData] = useState<MasterDataRequest>({
-    dataType: '',
+    categoryType: '',
     code: '',
     value: '',
-    parentCode: null,
     displayOrder: 1,
     isActive: true,
-    metadata: null,
   })
-  const [metadataString, setMetadataString] = useState('')
 
   // Form state for add category
   const [newCategory, setNewCategory] = useState<CategoryConfig>({
     code: '',
     label: '',
     description: '',
+    count: 0,
+    status: 'ACTIVE',
   })
 
   // Form state for add attribute
   const [newAttribute, setNewAttribute] = useState<MasterDataRequest>({
-    dataType: '',
+    categoryType: '',
     code: '',
     value: '',
-    parentCode: null,
     displayOrder: 1,
     isActive: true,
-    metadata: null,
   })
 
   // Fetch categories from API on mount
@@ -86,16 +85,18 @@ export function MasterDataPage() {
       try {
         const apiCategories = await masterDataService.getCategories()
         if (apiCategories && apiCategories.length > 0) {
-          // Merge API categories with defaults
-          const mergedCategories = apiCategories.map(code => {
-            const existing = DEFAULT_CATEGORIES.find(c => c.code === code)
-            return existing || {
-              code,
-              label: code.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-              description: `${code} master data`,
+          // Map API categories to CategoryConfig format
+          const mappedCategories: CategoryConfig[] = apiCategories.map((cat: MasterDataCategory) => {
+            const existing = DEFAULT_CATEGORIES.find(c => c.code === cat.categoryName)
+            return {
+              code: cat.categoryName,
+              label: existing?.label || cat.categoryName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+              description: existing?.description || `${cat.categoryName} master data`,
+              count: cat.count,
+              status: cat.status,
             }
           })
-          setCategories(mergedCategories)
+          setCategories(mappedCategories)
         }
       } catch {
         // If API fails, use default categories
@@ -143,15 +144,12 @@ export function MasterDataPage() {
   const handleEditClick = (item: MasterData) => {
     setSelectedItem(item)
     setFormData({
-      dataType: item.dataType,
+      categoryType: item.dataType,
       code: item.code,
       value: item.value,
-      parentCode: item.parentCode,
       displayOrder: item.displayOrder,
       isActive: item.isActive,
-      metadata: item.metadata,
     })
-    setMetadataString(item.metadata ? JSON.stringify(item.metadata, null, 2) : '')
     setIsEditModalOpen(true)
   }
 
@@ -167,21 +165,7 @@ export function MasterDataPage() {
       setIsSubmitting(true)
       setError('')
 
-      // Parse metadata if provided
-      let metadata: Record<string, unknown> | null = null
-      if (metadataString.trim()) {
-        try {
-          metadata = JSON.parse(metadataString)
-        } catch {
-          setError('Invalid JSON format for metadata')
-          return
-        }
-      }
-
-      await masterDataService.update(selectedItem.id, {
-        ...formData,
-        metadata,
-      })
+      await masterDataService.update(selectedItem.id, formData)
 
       setIsEditModalOpen(false)
       setSuccessMessage('Master data updated successfully')
@@ -229,18 +213,35 @@ export function MasterDataPage() {
       setIsSubmitting(true)
       setError('')
 
-      const categoryToAdd: CategoryConfig = {
+      // Call API to create the category
+      await masterDataService.create({
+        categoryType: newCategory.code.toUpperCase().replace(/\s+/g, '_'),
         code: newCategory.code.toUpperCase().replace(/\s+/g, '_'),
-        label: newCategory.label,
-        description: newCategory.description || `${newCategory.label} master data`,
-      }
-
-      // Add to local state
-      setCategories(prev => [...prev, categoryToAdd])
+        value: newCategory.label,
+        displayOrder: 1,
+        isActive: true,
+      })
 
       setIsAddCategoryModalOpen(false)
-      setNewCategory({ code: '', label: '', description: '' })
-      setSuccessMessage(`Category "${categoryToAdd.label}" added successfully`)
+      setNewCategory({ code: '', label: '', description: '', count: 0, status: 'ACTIVE' })
+      setSuccessMessage(`Category "${newCategory.label}" added successfully`)
+
+      // Refresh categories from API
+      const apiCategories = await masterDataService.getCategories()
+      if (apiCategories && apiCategories.length > 0) {
+        const mappedCategories: CategoryConfig[] = apiCategories.map((cat) => {
+          const existing = DEFAULT_CATEGORIES.find(c => c.code === cat.categoryName)
+          return {
+            code: cat.categoryName,
+            label: existing?.label || cat.categoryName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            description: existing?.description || `${cat.categoryName} master data`,
+            count: cat.count,
+            status: cat.status,
+          }
+        })
+        setCategories(mappedCategories)
+      }
+
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add category')
@@ -260,13 +261,11 @@ export function MasterDataPage() {
       setError('')
 
       await masterDataService.create({
-        dataType: selectedType!,
+        categoryType: selectedType!,
         code: newAttribute.code,
         value: newAttribute.value,
         displayOrder: newAttribute.displayOrder,
         isActive: newAttribute.isActive,
-        parentCode: null,
-        metadata: null,
       })
 
       setIsAddAttributeModalOpen(false)
@@ -294,11 +293,11 @@ export function MasterDataPage() {
 
       let result: BulkUploadResult
       if (selectedType) {
-        // Inside a data type - use V1 (type as parameter)
-        result = await masterDataService.bulkUploadV1(selectedType, uploadFile)
+        // Inside a data type - use bulk upload with type parameter
+        result = await masterDataService.bulkUploadByType(selectedType, uploadFile)
       } else {
-        // Landing page - use V2 (type in CSV column)
-        result = await masterDataService.bulkUploadV2(uploadFile)
+        // Landing page - use bulk upload without type (type in CSV column)
+        result = await masterDataService.bulkUpload(uploadFile)
       }
 
       setUploadResult(result)
@@ -316,13 +315,29 @@ export function MasterDataPage() {
     }
   }
 
-  const handleDownloadTemplate = async () => {
+  const handleDownloadCategoryTemplate = async () => {
+    try {
+      const blob = await masterDataService.downloadCategoryTemplate()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'master_data_category_template.csv'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to download template')
+    }
+  }
+
+  const handleDownloadAttributeTemplate = async () => {
     try {
       const blob = await masterDataService.downloadTemplate()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'master_data_template.csv'
+      a.download = 'master_data_attribute_template.csv'
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -345,27 +360,22 @@ export function MasterDataPage() {
 
   const resetForm = () => {
     setFormData({
-      dataType: selectedType || '',
+      categoryType: selectedType || '',
       code: '',
       value: '',
-      parentCode: null,
       displayOrder: 1,
       isActive: true,
-      metadata: null,
     })
-    setMetadataString('')
     setSelectedItem(null)
   }
 
   const resetNewAttributeForm = () => {
     setNewAttribute({
-      dataType: selectedType || '',
+      categoryType: selectedType || '',
       code: '',
       value: '',
-      parentCode: null,
       displayOrder: 1,
       isActive: true,
-      metadata: null,
     })
   }
 
@@ -383,11 +393,6 @@ export function MasterDataPage() {
     {
       key: 'value',
       header: 'Value',
-    },
-    {
-      key: 'parentCode',
-      header: 'Parent Code',
-      render: (item) => item.parentCode || '-',
     },
     {
       key: 'displayOrder',
@@ -477,7 +482,7 @@ export function MasterDataPage() {
             <p className="page-subtitle">Select a data type to view and manage its attributes</p>
           </div>
           <div className="page-header__actions">
-            <Button variant="secondary" onClick={handleDownloadTemplate}>
+            <Button variant="secondary" onClick={handleDownloadCategoryTemplate}>
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -617,6 +622,12 @@ export function MasterDataPage() {
               <div className="data-type-card__content">
                 <h3 className="data-type-card__title">{type.label}</h3>
                 <p className="data-type-card__description">{type.description}</p>
+                <div className="data-type-card__meta">
+                  <span className="data-type-card__count">{type.count} items</span>
+                  <span className={`data-type-card__status data-type-card__status--${type.status.toLowerCase()}`}>
+                    {type.status}
+                  </span>
+                </div>
               </div>
               <div className="data-type-card__arrow">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -638,7 +649,7 @@ export function MasterDataPage() {
           isOpen={isAddCategoryModalOpen}
           onClose={() => {
             setIsAddCategoryModalOpen(false)
-            setNewCategory({ code: '', label: '', description: '' })
+            setNewCategory({ code: '', label: '', description: '', count: 0, status: 'ACTIVE' })
             setError('')
           }}
           title="Add New Category"
@@ -646,16 +657,17 @@ export function MasterDataPage() {
           footer={
             <>
               <Button
+                type="button"
                 variant="secondary"
                 onClick={() => {
                   setIsAddCategoryModalOpen(false)
-                  setNewCategory({ code: '', label: '', description: '' })
+                  setNewCategory({ code: '', label: '', description: '', count: 0, status: 'ACTIVE' })
                   setError('')
                 }}
               >
                 Cancel
               </Button>
-              <Button onClick={handleAddCategory} isLoading={isSubmitting}>
+              <Button type="button" onClick={handleAddCategory} isLoading={isSubmitting}>
                 Add Category
               </Button>
             </>
@@ -713,17 +725,18 @@ export function MasterDataPage() {
             !uploadResult ? (
               <>
                 <Button
+                  type="button"
                   variant="secondary"
                   onClick={() => setIsBulkUploadModalOpen(false)}
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleBulkUpload} isLoading={isSubmitting} disabled={!uploadFile}>
+                <Button type="button" onClick={handleBulkUpload} isLoading={isSubmitting} disabled={!uploadFile}>
                   Upload
                 </Button>
               </>
             ) : (
-              <Button onClick={() => setIsBulkUploadModalOpen(false)}>Close</Button>
+              <Button type="button" onClick={() => setIsBulkUploadModalOpen(false)}>Close</Button>
             )
           }
         >
@@ -858,6 +871,37 @@ export function MasterDataPage() {
           <p className="page-subtitle">Manage attributes for {getTypeLabel(selectedType)} master data</p>
         </div>
         <div className="page-header__actions">
+          <Button variant="secondary" onClick={handleDownloadAttributeTemplate}>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              style={{ width: 18, height: 18 }}
+            >
+              <path
+                d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M7 10L12 15L17 10"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M12 15V3"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Download Template
+          </Button>
           <Button variant="secondary" onClick={openBulkUploadModal}>
             <svg
               viewBox="0 0 24 24"
@@ -960,6 +1004,7 @@ export function MasterDataPage() {
         footer={
           <>
             <Button
+              type="button"
               variant="secondary"
               onClick={() => {
                 setIsAddAttributeModalOpen(false)
@@ -969,7 +1014,7 @@ export function MasterDataPage() {
             >
               Cancel
             </Button>
-            <Button onClick={handleAddAttribute} isLoading={isSubmitting}>
+            <Button type="button" onClick={handleAddAttribute} isLoading={isSubmitting}>
               Add Attribute
             </Button>
           </>
@@ -1048,10 +1093,10 @@ export function MasterDataPage() {
         size="md"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>
+            <Button type="button" variant="secondary" onClick={() => setIsEditModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleUpdate} isLoading={isSubmitting}>
+            <Button type="button" onClick={handleUpdate} isLoading={isSubmitting}>
               Save Changes
             </Button>
           </>
@@ -1060,8 +1105,8 @@ export function MasterDataPage() {
         <form className="modal-form" onSubmit={(e) => e.preventDefault()}>
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Data Type</label>
-              <input type="text" className="form-input" value={formData.dataType} disabled />
+              <label className="form-label">Category Type</label>
+              <input type="text" className="form-input" value={formData.categoryType} disabled />
             </div>
             <div className="form-group">
               <label className="form-label">Code</label>
@@ -1080,18 +1125,6 @@ export function MasterDataPage() {
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Parent Code</label>
-              <input
-                type="text"
-                className="form-input"
-                value={formData.parentCode || ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, parentCode: e.target.value || null })
-                }
-                placeholder="Optional"
-              />
-            </div>
-            <div className="form-group">
               <label className="form-label">Display Order</label>
               <input
                 type="number"
@@ -1103,27 +1136,17 @@ export function MasterDataPage() {
                 min="1"
               />
             </div>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Status</label>
-            <select
-              className="form-input"
-              value={formData.isActive ? 'true' : 'false'}
-              onChange={(e) => setFormData({ ...formData, isActive: e.target.value === 'true' })}
-            >
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Metadata (JSON)</label>
-            <textarea
-              className="form-input form-textarea"
-              value={metadataString}
-              onChange={(e) => setMetadataString(e.target.value)}
-              placeholder='{"key": "value"}'
-              rows={4}
-            />
+            <div className="form-group">
+              <label className="form-label">Status</label>
+              <select
+                className="form-input"
+                value={formData.isActive ? 'true' : 'false'}
+                onChange={(e) => setFormData({ ...formData, isActive: e.target.value === 'true' })}
+              >
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </select>
+            </div>
           </div>
         </form>
       </Modal>
@@ -1136,10 +1159,10 @@ export function MasterDataPage() {
         size="sm"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>
+            <Button type="button" variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="danger" onClick={handleDelete} isLoading={isSubmitting}>
+            <Button type="button" variant="danger" onClick={handleDelete} isLoading={isSubmitting}>
               Delete
             </Button>
           </>
@@ -1184,17 +1207,18 @@ export function MasterDataPage() {
           !uploadResult ? (
             <>
               <Button
+                type="button"
                 variant="secondary"
                 onClick={() => setIsBulkUploadModalOpen(false)}
               >
                 Cancel
               </Button>
-              <Button onClick={handleBulkUpload} isLoading={isSubmitting} disabled={!uploadFile}>
+              <Button type="button" onClick={handleBulkUpload} isLoading={isSubmitting} disabled={!uploadFile}>
                 Upload
               </Button>
             </>
           ) : (
-            <Button onClick={() => setIsBulkUploadModalOpen(false)}>Close</Button>
+            <Button type="button" onClick={() => setIsBulkUploadModalOpen(false)}>Close</Button>
           )
         }
       >
