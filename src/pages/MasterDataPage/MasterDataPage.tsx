@@ -8,7 +8,7 @@ import { masterDataService } from '@services/api'
 import { Table, Column } from '@components/common/Table'
 import { Modal } from '@components/common/Modal'
 import { Button } from '@components/common/Button'
-import type { MasterData, MasterDataRequest, MasterDataCategory, BulkUploadResult, BulkUploadError } from '@types'
+import type { MasterData, MasterDataCreateRequest, MasterDataUpdateRequest, MasterDataCategory, BulkUploadResult, BulkUploadError } from '@types'
 import './MasterDataPage.css'
 
 // Type for category configuration
@@ -42,19 +42,21 @@ export function MasterDataPage() {
   // Modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isDeleteCategoryModalOpen, setIsDeleteCategoryModalOpen] = useState(false)
   const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false)
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false)
   const [isAddAttributeModalOpen, setIsAddAttributeModalOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState<MasterData | null>(null)
+  const [selectedCategoryToDelete, setSelectedCategoryToDelete] = useState<CategoryConfig | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Bulk upload state
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadResult, setUploadResult] = useState<BulkUploadResult | null>(null)
 
-  // Form state for edit
-  const [formData, setFormData] = useState<MasterDataRequest>({
-    categoryType: '',
+  // Form state for edit (uses dataType for update API)
+  const [formData, setFormData] = useState<MasterDataUpdateRequest>({
+    dataType: '',
     code: '',
     value: '',
     displayOrder: 1,
@@ -70,8 +72,8 @@ export function MasterDataPage() {
     status: 'ACTIVE',
   })
 
-  // Form state for add attribute
-  const [newAttribute, setNewAttribute] = useState<MasterDataRequest>({
+  // Form state for add attribute (uses categoryType for create API)
+  const [newAttribute, setNewAttribute] = useState<MasterDataCreateRequest>({
     categoryType: '',
     code: '',
     value: '',
@@ -144,7 +146,7 @@ export function MasterDataPage() {
   const handleEditClick = (item: MasterData) => {
     setSelectedItem(item)
     setFormData({
-      categoryType: item.dataType,
+      dataType: item.dataType,
       code: item.code,
       value: item.value,
       displayOrder: item.displayOrder,
@@ -197,6 +199,49 @@ export function MasterDataPage() {
     }
   }
 
+  const handleDeleteCategoryClick = (e: React.MouseEvent, category: CategoryConfig) => {
+    e.stopPropagation() // Prevent card click from triggering
+    setSelectedCategoryToDelete(category)
+    setIsDeleteCategoryModalOpen(true)
+  }
+
+  const handleDeleteCategory = async () => {
+    if (!selectedCategoryToDelete) return
+
+    try {
+      setIsSubmitting(true)
+      setError('')
+      await masterDataService.deleteByType(selectedCategoryToDelete.code)
+      setIsDeleteCategoryModalOpen(false)
+      setSelectedCategoryToDelete(null)
+      setSuccessMessage(`Category "${selectedCategoryToDelete.label}" deleted successfully`)
+
+      // Refresh categories from API
+      const apiCategories = await masterDataService.getCategories()
+      if (apiCategories && apiCategories.length > 0) {
+        const mappedCategories: CategoryConfig[] = apiCategories.map((cat) => {
+          const existing = DEFAULT_CATEGORIES.find(c => c.code === cat.categoryName)
+          return {
+            code: cat.categoryName,
+            label: existing?.label || cat.categoryName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            description: existing?.description || `${cat.categoryName} master data`,
+            count: cat.count,
+            status: cat.status,
+          }
+        })
+        setCategories(mappedCategories)
+      } else {
+        setCategories([])
+      }
+
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete category')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const handleAddCategory = async () => {
     if (!newCategory.code || !newCategory.label) {
       setError('Code and Label are required')
@@ -213,7 +258,7 @@ export function MasterDataPage() {
       setIsSubmitting(true)
       setError('')
 
-      // Call API to create the category
+      // Call API to create the category (uses categoryType for create)
       await masterDataService.create({
         categoryType: newCategory.code.toUpperCase().replace(/\s+/g, '_'),
         code: newCategory.code.toUpperCase().replace(/\s+/g, '_'),
@@ -360,7 +405,7 @@ export function MasterDataPage() {
 
   const resetForm = () => {
     setFormData({
-      categoryType: selectedType || '',
+      dataType: selectedType || '',
       code: '',
       value: '',
       displayOrder: 1,
@@ -629,6 +674,16 @@ export function MasterDataPage() {
                   </span>
                 </div>
               </div>
+              <button
+                className="data-type-card__delete"
+                onClick={(e) => handleDeleteCategoryClick(e, type)}
+                title="Delete Category"
+              >
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 6H5H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
               <div className="data-type-card__arrow">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
@@ -791,7 +846,7 @@ export function MasterDataPage() {
                   Upload a CSV file with multiple data types. Each row must include the category type.
                 </p>
                 <ul>
-                  <li><strong>categoryType</strong> - The data type/category (required)</li>
+                  <li><strong>dataType</strong> - The data type/category (required)</li>
                   <li><strong>code</strong> - Unique identifier (required)</li>
                   <li><strong>value</strong> - Display value (required)</li>
                   <li><strong>parentCode</strong> - Reference to parent code (optional)</li>
@@ -838,6 +893,53 @@ export function MasterDataPage() {
               )}
             </div>
           )}
+        </Modal>
+
+        {/* Delete Category Confirmation Modal - for landing page */}
+        <Modal
+          isOpen={isDeleteCategoryModalOpen}
+          onClose={() => {
+            setIsDeleteCategoryModalOpen(false)
+            setSelectedCategoryToDelete(null)
+          }}
+          title="Delete Category"
+          size="sm"
+          footer={
+            <>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setIsDeleteCategoryModalOpen(false)
+                  setSelectedCategoryToDelete(null)
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={handleDeleteCategory}
+                isLoading={isSubmitting}
+              >
+                Delete Category
+              </Button>
+            </>
+          }
+        >
+          <div className="delete-confirmation">
+            <div className="delete-confirmation__icon">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <p className="delete-confirmation__message">
+              Are you sure you want to delete the category <strong>"{selectedCategoryToDelete?.label}"</strong>?
+            </p>
+            <p className="delete-confirmation__warning">
+              This will delete all {selectedCategoryToDelete?.count || 0} items in this category. This action cannot be undone.
+            </p>
+          </div>
         </Modal>
       </div>
     )
@@ -1106,7 +1208,7 @@ export function MasterDataPage() {
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">Category Type</label>
-              <input type="text" className="form-input" value={formData.categoryType} disabled />
+              <input type="text" className="form-input" value={formData.dataType} disabled />
             </div>
             <div className="form-group">
               <label className="form-label">Code</label>
@@ -1329,6 +1431,53 @@ export function MasterDataPage() {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* Delete Category Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteCategoryModalOpen}
+        onClose={() => {
+          setIsDeleteCategoryModalOpen(false)
+          setSelectedCategoryToDelete(null)
+        }}
+        title="Delete Category"
+        size="sm"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setIsDeleteCategoryModalOpen(false)
+                setSelectedCategoryToDelete(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={handleDeleteCategory}
+              isLoading={isSubmitting}
+            >
+              Delete Category
+            </Button>
+          </>
+        }
+      >
+        <div className="delete-confirmation">
+          <div className="delete-confirmation__icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <p className="delete-confirmation__message">
+            Are you sure you want to delete the category <strong>"{selectedCategoryToDelete?.label}"</strong>?
+          </p>
+          <p className="delete-confirmation__warning">
+            This will delete all {selectedCategoryToDelete?.count || 0} items in this category. This action cannot be undone.
+          </p>
+        </div>
       </Modal>
     </div>
   )

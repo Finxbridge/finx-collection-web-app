@@ -9,7 +9,8 @@ import { strategyEngineService } from '@services/api'
 import { Modal } from '@components/common/Modal'
 import { RuleCard } from './components/RuleCard'
 import { RuleWizard } from './components/RuleWizard'
-import type { Rule, StrategyEngineStats, RuleWizardData } from '@types'
+import { RuleDetailsModal } from './components/RuleDetailsModal'
+import type { Rule, StrategyEngineStats, RuleWizardData, SimulationResult, Strategy } from '@types'
 import './StrategyEnginePage.css'
 
 type TabType = 'rules' | 'logs'
@@ -27,8 +28,14 @@ export function StrategyEnginePage() {
   // Modal states
   const [isWizardOpen, setIsWizardOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isSimulateModalOpen, setIsSimulateModalOpen] = useState(false)
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [selectedRule, setSelectedRule] = useState<Rule | null>(null)
+  const [detailsStrategy, setDetailsStrategy] = useState<Strategy | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSimulating, setIsSimulating] = useState(false)
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false)
+  const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null)
 
   // Fetch stats
   const fetchStats = useCallback(async () => {
@@ -128,6 +135,37 @@ export function StrategyEnginePage() {
     navigate(`/strategy-engine/logs?ruleId=${rule.id}`)
   }
 
+  const handleSimulate = async (rule: Rule) => {
+    try {
+      setSelectedRule(rule)
+      setIsSimulating(true)
+      setIsSimulateModalOpen(true)
+      setSimulationResult(null)
+      const result = await strategyEngineService.simulateStrategy(parseInt(rule.id))
+      setSimulationResult(result)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to simulate rule')
+      setIsSimulateModalOpen(false)
+    } finally {
+      setIsSimulating(false)
+    }
+  }
+
+  const handleViewDetails = async (rule: Rule) => {
+    try {
+      setIsLoadingDetails(true)
+      setIsDetailsModalOpen(true)
+      setDetailsStrategy(null)
+      const strategy = await strategyEngineService.getStrategyById(parseInt(rule.id))
+      setDetailsStrategy(strategy)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load rule details')
+      setIsDetailsModalOpen(false)
+    } finally {
+      setIsLoadingDetails(false)
+    }
+  }
+
   const handleWizardSubmit = async (data: RuleWizardData) => {
     try {
       setIsSubmitting(true)
@@ -138,11 +176,13 @@ export function StrategyEnginePage() {
           channel: data.channel!,
           status: selectedRule.status,
           templateId: data.templateId,
+          templateName: data.templateName, // Pass template name for API
           ownership: data.ownership,
           priority: data.priority,
           dpdTrigger: data.dpdTrigger,
           frequency: data.frequency,
           filters: data.filters,
+          apiFilters: data.apiFilters, // Pass API-formatted filters
         })
         setSuccessMessage('Rule updated successfully')
       } else {
@@ -152,11 +192,13 @@ export function StrategyEnginePage() {
           channel: data.channel!,
           status: 'active',
           templateId: data.templateId,
+          templateName: data.templateName, // Pass template name for API
           ownership: data.ownership,
           priority: data.priority,
           dpdTrigger: data.dpdTrigger,
           frequency: data.frequency,
           filters: data.filters,
+          apiFilters: data.apiFilters, // Pass API-formatted filters
         })
         setSuccessMessage('Rule created successfully')
       }
@@ -384,6 +426,8 @@ export function StrategyEnginePage() {
                 onToggleStatus={() => handleToggleStatus(rule)}
                 onRunNow={() => handleRunNow(rule)}
                 onViewLogs={() => handleViewLogs(rule)}
+                onSimulate={() => handleSimulate(rule)}
+                onViewDetails={() => handleViewDetails(rule)}
               />
             ))
           )}
@@ -448,6 +492,87 @@ export function StrategyEnginePage() {
           </div>
         </div>
       </Modal>
+
+      {/* Simulation Results Modal */}
+      <Modal
+        isOpen={isSimulateModalOpen}
+        onClose={() => {
+          setIsSimulateModalOpen(false)
+          setSelectedRule(null)
+          setSimulationResult(null)
+        }}
+        title={`Simulation Results - ${selectedRule?.name || ''}`}
+        size="lg"
+      >
+        <div className="simulate-modal-content">
+          {isSimulating ? (
+            <div className="loading-container">
+              <div className="spinner"></div>
+              <span>Running simulation...</span>
+            </div>
+          ) : simulationResult ? (
+            <>
+              <div className="simulate-summary">
+                <div className="simulate-summary__stat">
+                  <span className="simulate-summary__value">{simulationResult.matchedCasesCount}</span>
+                  <span className="simulate-summary__label">Matched Cases</span>
+                </div>
+              </div>
+              {simulationResult.matchedCases.length > 0 ? (
+                <div className="simulate-table-container">
+                  <table className="simulate-table">
+                    <thead>
+                      <tr>
+                        <th>Case ID</th>
+                        <th>Customer Name</th>
+                        <th>Loan Account</th>
+                        <th>DPD</th>
+                        <th>Outstanding</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {simulationResult.matchedCases.map((caseItem) => (
+                        <tr key={caseItem.caseId}>
+                          <td>{caseItem.caseId}</td>
+                          <td>{caseItem.customerName}</td>
+                          <td>{caseItem.loanAccountNumber}</td>
+                          <td>{caseItem.dpd}</td>
+                          <td>{caseItem.totalOutstanding.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="simulate-no-results">No matching cases found for the current criteria.</p>
+              )}
+            </>
+          ) : null}
+          <div className="simulate-modal-actions">
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                setIsSimulateModalOpen(false)
+                setSelectedRule(null)
+                setSimulationResult(null)
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Rule Details Modal */}
+      <RuleDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => {
+          setIsDetailsModalOpen(false)
+          setDetailsStrategy(null)
+        }}
+        strategy={detailsStrategy}
+        isLoading={isLoadingDetails}
+      />
     </div>
   )
 }

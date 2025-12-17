@@ -7,10 +7,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { strategyEngineService } from '@services/api'
 import { Modal } from '@components/common/Modal'
-import type { ExecutionLog, ExecutionStatus } from '@types'
+import type { ExecutionLog, LegacyExecutionStatus } from '@types'
 import './ExecutionLogsPage.css'
 
-const statusIcons: Record<ExecutionStatus, JSX.Element> = {
+const statusIcons: Record<LegacyExecutionStatus, JSX.Element> = {
   success: (
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -171,13 +171,12 @@ export function ExecutionLogsPage() {
             <table className="logs-table">
               <thead>
                 <tr>
-                  <th>Run ID</th>
-                  <th>Rule Name</th>
-                  <th>Trigger</th>
+                  <th>Strategy Name</th>
                   <th>Start Time</th>
-                  <th>Duration</th>
                   <th>Status</th>
-                  <th>Results</th>
+                  <th>Total</th>
+                  <th>Success</th>
+                  <th>Failed</th>
                   <th></th>
                 </tr>
               </thead>
@@ -185,29 +184,9 @@ export function ExecutionLogsPage() {
                 {logs.map((log) => (
                   <tr key={log.id}>
                     <td>
-                      <span className="run-id">{log.runId}</span>
-                    </td>
-                    <td>
                       <span className="rule-name">{log.ruleName}</span>
                     </td>
-                    <td>
-                      <span className={`trigger-badge trigger-badge--${log.triggerType}`}>
-                        {log.triggerType === 'scheduled' ? (
-                          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 6V12L16 14M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        ) : (
-                          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 5C12.83 5 13.5 5.67 13.5 6.5C13.5 7.33 12.83 8 12 8C11.17 8 10.5 7.33 10.5 6.5C10.5 5.67 11.17 5 12 5ZM15 18H9V16H11V11H9V9H13V16H15V18Z" fill="currentColor"/>
-                          </svg>
-                        )}
-                        {log.triggerType}
-                      </span>
-                    </td>
                     <td>{formatDateTime(log.startTime)}</td>
-                    <td>
-                      <span className="duration">{formatDuration(log.duration)}</span>
-                    </td>
                     <td>
                       <span className={`log-status-badge log-status-badge--${log.status}`}>
                         {statusIcons[log.status]}
@@ -215,24 +194,17 @@ export function ExecutionLogsPage() {
                       </span>
                     </td>
                     <td>
-                      <div className="log-stats">
-                        <div className="log-stat">
-                          <span className="log-stat__value">{log.totalProcessed}</span>
-                          <span className="log-stat__label">Total</span>
-                        </div>
-                        <div className="log-stat">
-                          <span className="log-stat__value log-stat__value--success">
-                            {log.successCount}
-                          </span>
-                          <span className="log-stat__label">Success</span>
-                        </div>
-                        <div className="log-stat">
-                          <span className="log-stat__value log-stat__value--failed">
-                            {log.failedCount}
-                          </span>
-                          <span className="log-stat__label">Failed</span>
-                        </div>
-                      </div>
+                      <span className="log-stat__value">{log.totalProcessed}</span>
+                    </td>
+                    <td>
+                      <span className="log-stat__value log-stat__value--success">
+                        {log.successCount}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="log-stat__value log-stat__value--failed">
+                        {log.failedCount}
+                      </span>
                     </td>
                     <td>
                       <button
@@ -297,21 +269,15 @@ export function ExecutionLogsPage() {
         {selectedLog && (
           <div className="log-details">
             <div className="log-details__section">
-              <h4 className="log-details__section-title">General Information</h4>
+              <h4 className="log-details__section-title">Execution Information</h4>
               <div className="log-details__grid">
                 <div className="log-details__item">
-                  <span className="log-details__label">Run ID</span>
+                  <span className="log-details__label">Execution ID</span>
                   <span className="log-details__value">{selectedLog.runId}</span>
                 </div>
                 <div className="log-details__item">
-                  <span className="log-details__label">Rule Name</span>
+                  <span className="log-details__label">Strategy Name</span>
                   <span className="log-details__value">{selectedLog.ruleName}</span>
-                </div>
-                <div className="log-details__item">
-                  <span className="log-details__label">Trigger Type</span>
-                  <span className="log-details__value" style={{ textTransform: 'capitalize' }}>
-                    {selectedLog.triggerType}
-                  </span>
                 </div>
                 <div className="log-details__item">
                   <span className="log-details__label">Status</span>
@@ -327,13 +293,13 @@ export function ExecutionLogsPage() {
               <h4 className="log-details__section-title">Timing</h4>
               <div className="log-details__grid">
                 <div className="log-details__item">
-                  <span className="log-details__label">Start Time</span>
+                  <span className="log-details__label">Started At</span>
                   <span className="log-details__value">
                     {formatDateTime(selectedLog.startTime)}
                   </span>
                 </div>
                 <div className="log-details__item">
-                  <span className="log-details__label">End Time</span>
+                  <span className="log-details__label">Completed At</span>
                   <span className="log-details__value">
                     {selectedLog.endTime ? formatDateTime(selectedLog.endTime) : 'In Progress'}
                   </span>
@@ -351,17 +317,17 @@ export function ExecutionLogsPage() {
               <h4 className="log-details__section-title">Results</h4>
               <div className="log-details__grid">
                 <div className="log-details__item">
-                  <span className="log-details__label">Total Processed</span>
+                  <span className="log-details__label">Total Cases Processed</span>
                   <span className="log-details__value">{selectedLog.totalProcessed}</span>
                 </div>
                 <div className="log-details__item">
-                  <span className="log-details__label">Success Count</span>
+                  <span className="log-details__label">Successful Actions</span>
                   <span className="log-details__value" style={{ color: '#16a34a' }}>
                     {selectedLog.successCount}
                   </span>
                 </div>
                 <div className="log-details__item">
-                  <span className="log-details__label">Failed Count</span>
+                  <span className="log-details__label">Failed Actions</span>
                   <span className="log-details__value" style={{ color: '#dc2626' }}>
                     {selectedLog.failedCount}
                   </span>

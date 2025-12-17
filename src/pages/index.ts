@@ -27,6 +27,7 @@ export { MasterDataPage } from './MasterDataPage/MasterDataPage'
 export { CaseUploadPage } from './CaseUploadPage/CaseUploadPage'
 export { BatchDetailPage } from './BatchDetailPage/BatchDetailPage'
 export { UnallocatedCasesPage } from './UnallocatedCasesPage/UnallocatedCasesPage'
+export { UnallocatedCaseDetailPage } from './UnallocatedCaseDetailPage/UnallocatedCaseDetailPage'
 export { CaseSearchPage } from './CaseSearchPage/CaseSearchPage'
 export { CaseDetailPage } from './CaseDetailPage/CaseDetailPage'
 
@@ -44,3 +45,6 @@ export { ReallocationPage } from './ReallocationPage/ReallocationPage'
 export { AllocationBatchesPage } from './AllocationBatchesPage/AllocationBatchesPage'
 export { AllocationBatchDetailPage } from './AllocationBatchDetailPage/AllocationBatchDetailPage'
 export { AllocatedCasesPage } from './AllocatedCasesPage/AllocatedCasesPage'
+
+// Template Management pages
+export { TemplateManagementPage } from './TemplateManagementPage'

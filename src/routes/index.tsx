@@ -23,6 +23,7 @@ import {
   CaseUploadPage,
   BatchDetailPage,
   UnallocatedCasesPage,
+  UnallocatedCaseDetailPage,
   CaseSearchPage,
   CaseDetailPage,
   StrategyEnginePage,
@@ -36,6 +37,7 @@ import {
   AllocationBatchesPage,
   AllocationBatchDetailPage,
   AllocatedCasesPage,
+  TemplateManagementPage,
 } from '@pages'
 import { ProtectedRoute } from './ProtectedRoute'
 import { ROUTES } from '@config/constants'
@@ -77,6 +79,7 @@ export function AppRoutes() {
         <Route path={ROUTES.CASE_SOURCING_UPLOAD} element={<CaseUploadPage />} />
         <Route path={ROUTES.CASE_SOURCING_BATCH_DETAIL} element={<BatchDetailPage />} />
         <Route path={ROUTES.CASE_SOURCING_UNALLOCATED} element={<UnallocatedCasesPage />} />
+        <Route path={ROUTES.CASE_SOURCING_UNALLOCATED_DETAIL} element={<UnallocatedCaseDetailPage />} />
         <Route path={ROUTES.CASE_SOURCING_SEARCH} element={<CaseSearchPage />} />
         <Route path={ROUTES.CASE_SOURCING_CASE_DETAIL} element={<CaseDetailPage />} />
 
@@ -95,6 +98,9 @@ export function AppRoutes() {
         <Route path={ROUTES.ALLOCATION_BATCH_DETAIL} element={<AllocationBatchDetailPage />} />
         <Route path={ROUTES.REALLOCATION_BATCH_DETAIL} element={<AllocationBatchDetailPage />} />
         <Route path={ROUTES.ALLOCATED_CASES} element={<AllocatedCasesPage />} />
+
+        {/* Template Management routes */}
+        <Route path={ROUTES.TEMPLATE_MANAGEMENT} element={<TemplateManagementPage />} />
       </Route>
 
       {/* 404 Not Found */}

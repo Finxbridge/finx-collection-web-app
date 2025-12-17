@@ -22,7 +22,14 @@
       "Bash(find:*)",
       "Bash(grep:*)",
       "Bash(if not exist \"c:\\projects\\collections_frontend\\Collections_frontend_10-12-2025\\finx-collection-web-app\\src\\pages\\AllocationBatchDetailPage\" mkdir \"c:\\projects\\collections_frontend\\Collections_frontend_10-12-2025\\finx-collection-web-app\\src\\pages\\AllocationBatchDetailPage\")",
-      "Bash(if not exist \"c:\\projects\\collections_frontend\\Collections_frontend_10-12-2025\\finx-collection-web-app\\src\\pages\\AllocatedCasesPage\" mkdir \"c:\\projects\\collections_frontend\\Collections_frontend_10-12-2025\\finx-collection-web-app\\src\\pages\\AllocatedCasesPage\")"
+      "Bash(if not exist \"c:\\projects\\collections_frontend\\Collections_frontend_10-12-2025\\finx-collection-web-app\\src\\pages\\AllocatedCasesPage\" mkdir \"c:\\projects\\collections_frontend\\Collections_frontend_10-12-2025\\finx-collection-web-app\\src\\pages\\AllocatedCasesPage\")",
+      "Bash(if not exist \"c:\\projects\\collections_frontend\\Collections_frontend_10-12-2025\\finx-collection-web-app\\src\\pages\\TemplateManagementPage\" mkdir \"c:\\projects\\collections_frontend\\Collections_frontend_10-12-2025\\finx-collection-web-app\\src\\pages\\TemplateManagementPage\")",
+      "Bash(if not exist \"c:\\projects\\collections_frontend\\Collections_frontend_10-12-2025\\finx-collection-web-app\\src\\pages\\TemplateManagementPage\\components\" mkdir \"c:\\projects\\collections_frontend\\Collections_frontend_10-12-2025\\finx-collection-web-app\\src\\pages\\TemplateManagementPage\\components\")",
+      "Bash(mkdir:*)",
+      "Bash(touch:*)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []

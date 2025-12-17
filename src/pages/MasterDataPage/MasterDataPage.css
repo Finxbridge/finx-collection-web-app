@@ -635,6 +635,37 @@
   transform: translateX(4px);
 }
 
+/* Delete Category Button */
+.data-type-card__delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  opacity: 0;
+}
+
+.data-type-card__delete svg {
+  width: 18px;
+  height: 18px;
+}
+
+.data-type-card:hover .data-type-card__delete {
+  opacity: 1;
+}
+
+.data-type-card__delete:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .page-header {
