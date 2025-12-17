@@ -84,10 +84,6 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
       newErrors.content = 'Template content is required';
     }
 
-    if (formData.channel === 'SMS' && formData.content.length > 160) {
-      newErrors.content = `SMS content exceeds 160 characters (${formData.content.length}/160)`;
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -106,9 +102,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
     }
   };
 
-  const charLimit = formData.channel === 'SMS' ? 160 : null;
   const charCount = formData.content.length;
-  const isOverLimit = charLimit && charCount > charLimit;
 
   return (
     <form onSubmit={handleSubmit}>
@@ -193,15 +187,13 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
             ref={contentRef}
             value={formData.content}
             onChange={(e) => handleInputChange('content', e.target.value)}
-            className={`form-textarea ${errors.content || isOverLimit ? 'form-textarea--error' : ''}`}
+            className={`form-textarea ${errors.content ? 'form-textarea--error' : ''}`}
             rows={12}
             placeholder="Enter template content using {{variable_name}} for placeholders"
           />
-          {charLimit && (
-            <p className={`char-counter ${isOverLimit ? 'char-counter--error' : ''}`}>
-              {charCount} / {charLimit} characters
-            </p>
-          )}
+          <p className="char-counter">
+            {charCount} characters
+          </p>
           {errors.content && <span className="form-error">{errors.content}</span>}
         </div>
 
