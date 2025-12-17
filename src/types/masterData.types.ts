@@ -17,9 +17,20 @@ export interface MasterData {
   updatedAt: string
 }
 
-// Request to create/update master data
-export interface MasterDataRequest {
+// Request to create master data
+// Note: API uses 'categoryType' for creating
+export interface MasterDataCreateRequest {
   categoryType: string
+  code: string
+  value: string
+  displayOrder?: number
+  isActive?: boolean
+}
+
+// Request to update master data
+// Note: API uses 'dataType' for updating
+export interface MasterDataUpdateRequest {
+  dataType: string
   code: string
   value: string
   displayOrder?: number
@@ -67,8 +78,9 @@ export type MasterDataType =
   | string
 
 // Form data for creating/editing master data
+// Note: Uses 'dataType' to match API, UI labels show 'Category Type'
 export interface MasterDataFormData {
-  categoryType: string
+  dataType: string
   code: string
   value: string
   displayOrder: number

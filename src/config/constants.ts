@@ -46,6 +46,8 @@ export const ROUTES = {
   ALLOCATION_BATCH_DETAIL: '/allocation/batch/:batchId',
   REALLOCATION_BATCH_DETAIL: '/allocation/reallocation/batch/:batchId',
   ALLOCATED_CASES: '/allocation/cases',
+  // Template Management Routes
+  TEMPLATE_MANAGEMENT: '/template-management',
   NOT_FOUND: '*',
 } as const
 
@@ -107,6 +109,7 @@ export const API_ENDPOINTS = {
     CREATE: '/master-data/create',
     UPDATE: (id: number) => `/master-data/${id}`,
     DELETE: (id: number) => `/master-data/${id}`,
+    DELETE_BY_TYPE: (type: string) => `/master-data/type/${type}`,
     BULK_UPLOAD: '/master-data/bulk-upload',
     BULK_UPLOAD_BY_TYPE: '/master-data/bulk-upload-by-type',
     TEMPLATE: '/master-data/upload/template',
@@ -129,7 +132,7 @@ export const API_ENDPOINTS = {
     BATCH_ERRORS_EXPORT: (batchId: string) => `/case/source/${batchId}/errors/export`,
     BATCH_EXPORT: (batchId: string) => `/case/source/${batchId}/export`,
     UNALLOCATED: '/case/source/unallocated',
-    UNALLOCATED_DETAIL: (caseId: number) => `/case/source/unallocated/${caseId}`,
+    UNALLOCATED_DETAIL: (caseId: number) => `/source/unallocated/${caseId}`,
     SEARCH: '/case/source/search',
     CASE_TIMELINE: (caseId: number) => `/case/source/${caseId}/timeline`,
     REPORTS_INTAKE: '/case/source/reports/intake',

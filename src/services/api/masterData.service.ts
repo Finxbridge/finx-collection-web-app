@@ -8,7 +8,8 @@ import { API_ENDPOINTS } from '@config/constants'
 import type {
   ApiResponse,
   MasterData,
-  MasterDataRequest,
+  MasterDataCreateRequest,
+  MasterDataUpdateRequest,
   MasterDataCategory,
   MasterDataCategoriesResponse,
   BulkUploadResult,
@@ -62,9 +63,10 @@ export const masterDataService = {
 
   /**
    * Create master data
-   * POST /master-data
+   * POST /master-data/create
+   * Note: Uses 'categoryType' field for creation
    */
-  async create(data: MasterDataRequest): Promise<MasterData> {
+  async create(data: MasterDataCreateRequest): Promise<MasterData> {
     const response = await apiClient.post<ApiResponse<MasterData>>(
       API_ENDPOINTS.MASTER_DATA.CREATE,
       data
@@ -79,8 +81,9 @@ export const masterDataService = {
   /**
    * Update master data
    * PUT /master-data/{id}
+   * Note: Uses 'dataType' field for updates
    */
-  async update(id: number, data: MasterDataRequest): Promise<MasterData> {
+  async update(id: number, data: MasterDataUpdateRequest): Promise<MasterData> {
     const response = await apiClient.put<ApiResponse<MasterData>>(
       API_ENDPOINTS.MASTER_DATA.UPDATE(id),
       data
@@ -102,6 +105,20 @@ export const masterDataService = {
     )
     if (!isSuccess(response.data.status)) {
       throw new Error(response.data.message || 'Failed to delete master data')
+    }
+  },
+
+  /**
+   * Delete all master data by type (category)
+   * DELETE /master-data/type/{type}
+   */
+  async deleteByType(type: string): Promise<void> {
+    const response = await apiClient.delete<ApiResponse<null>>(
+      API_ENDPOINTS.MASTER_DATA.DELETE_BY_TYPE(type)
+    )
+    // Check for success - handle both wrapped response and direct response
+    if (response.data && response.data.status && !isSuccess(response.data.status)) {
+      throw new Error(response.data.message || 'Failed to delete category')
     }
   },
 

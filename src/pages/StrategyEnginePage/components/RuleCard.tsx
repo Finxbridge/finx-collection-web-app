@@ -3,7 +3,8 @@
  * Displays a single communication rule with actions
  */
 
-import type { Rule, CommunicationChannel, ExecutionStatus } from '@types'
+import { useState, useRef, useEffect } from 'react'
+import type { Rule, LegacyCommunicationChannel, LegacyExecutionStatus } from '@types'
 
 interface RuleCardProps {
   rule: Rule
@@ -12,9 +13,11 @@ interface RuleCardProps {
   onToggleStatus: () => void
   onRunNow: () => void
   onViewLogs: () => void
+  onSimulate: () => void
+  onViewDetails: () => void
 }
 
-const channelIcons: Record<CommunicationChannel, JSX.Element> = {
+const channelIcons: Record<LegacyCommunicationChannel, JSX.Element> = {
   SMS: (
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -44,7 +47,7 @@ const channelIcons: Record<CommunicationChannel, JSX.Element> = {
   ),
 }
 
-const statusIcons: Record<ExecutionStatus, JSX.Element> = {
+const statusIcons: Record<LegacyExecutionStatus, JSX.Element> = {
   success: (
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -74,7 +77,31 @@ export function RuleCard({
   onToggleStatus,
   onRunNow,
   onViewLogs,
+  onSimulate,
+  onViewDetails,
 }: RuleCardProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
+  const menuRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false)
+      }
+    }
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isMenuOpen])
+
   const formatDateTime = (dateStr: string): string => {
     return new Date(dateStr).toLocaleString('en-US', {
       month: 'short',
@@ -100,9 +127,30 @@ export function RuleCard({
     }
   }
 
+  const handleMenuAction = (action: () => void) => {
+    setIsMenuOpen(false)
+    action()
+  }
+
+  const handleMenuToggle = () => {
+    if (!isMenuOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setMenuPosition({
+        top: rect.bottom + 4,
+        left: rect.right - 120, // 120 is min-width of dropdown
+      })
+    }
+    setIsMenuOpen(!isMenuOpen)
+  }
+
   return (
     <div className="rule-card">
-      <div className="rule-card__main">
+      <div
+        className="rule-card__main"
+        onClick={onViewDetails}
+        style={{ cursor: 'pointer' }}
+        title="Click to view details"
+      >
         <div className="rule-card__header">
           <h3 className="rule-card__name">{rule.name}</h3>
           <span className={`rule-card__channel rule-card__channel--${rule.channel.toLowerCase()}`}>
@@ -129,12 +177,6 @@ export function RuleCard({
       </div>
 
       <div className="rule-card__stats">
-        <div className="rule-card__stat">
-          <div className="rule-card__stat-value">
-            {rule.eligibleCount.toLocaleString()}
-          </div>
-          <div className="rule-card__stat-label">Eligible</div>
-        </div>
         {rule.lastRunStatus && (
           <div className="rule-card__stat">
             <span className={`run-status-badge run-status-badge--${rule.lastRunStatus}`}>
@@ -168,16 +210,14 @@ export function RuleCard({
           </svg>
         </button>
         <button
-          className="rule-action-btn rule-action-btn--logs"
-          onClick={onViewLogs}
-          title="View Logs"
+          className="rule-action-btn rule-action-btn--simulate"
+          onClick={onSimulate}
+          title="Simulate Rule"
         >
+          {/* Play/Test icon - represents simulation/preview */}
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M14 2V8H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M16 13H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M16 17H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M10 9H9H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M10 8L16 12L10 16V8Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
         <button
@@ -190,16 +230,52 @@ export function RuleCard({
             <path d="M5 3L19 12L5 21V3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
-        <button
-          className="rule-action-btn rule-action-btn--delete"
-          onClick={onDelete}
-          title="Delete Rule"
-        >
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 6H5H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
+
+        {/* 3-dot menu for additional actions */}
+        <div className="rule-card__menu" ref={menuRef}>
+          <button
+            ref={buttonRef}
+            className="rule-action-btn rule-action-btn--more"
+            onClick={handleMenuToggle}
+            title="More Actions"
+          >
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+              <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+              <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+            </svg>
+          </button>
+
+          {isMenuOpen && (
+            <div
+              className="rule-card__dropdown"
+              style={{ top: menuPosition.top, left: menuPosition.left }}
+            >
+              <button
+                className="rule-card__dropdown-item"
+                onClick={() => handleMenuAction(onViewLogs)}
+              >
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M14 2V8H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M16 13H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M16 17H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Logs
+              </button>
+              <button
+                className="rule-card__dropdown-item rule-card__dropdown-item--danger"
+                onClick={() => handleMenuAction(onDelete)}
+              >
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 6H5H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

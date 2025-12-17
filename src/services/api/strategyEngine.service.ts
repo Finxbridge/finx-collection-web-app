@@ -1,472 +1,703 @@
 /**
  * Strategy Engine API service
- * Handles all strategy engine API calls with mock data
+ * Handles all strategy engine API calls
  */
 
+import { apiClient } from './axios.config'
+import type { ApiResponse } from '@types'
 import type {
-  Rule,
-  RuleRequest,
-  ExecutionLog,
-  StrategyEngineStats,
+  Strategy,
+  StrategyRequest,
+  StrategyExecution,
+  StrategyExecutionDetail,
+  DashboardResponse,
+  SimulationResult,
+  ExecutionInitiatedResponse,
   RuleTemplate,
   FilterField,
+  CommunicationChannel,
+  StrategyEngineStats,
   RulesListResponse,
   ExecutionLogsResponse,
+  StrategyFilter,
+  Rule,
+  FilterGroup,
 } from '@types'
 
-// Mock templates
-const mockTemplates: RuleTemplate[] = [
-  { id: '1', name: 'Gentle Reminder', channel: 'SMS', content: 'Dear {name}, this is a gentle reminder about your pending payment.' },
-  { id: '2', name: 'Payment Due Notice', channel: 'Email', content: 'Your payment of {amount} is due on {date}.' },
-  { id: '3', name: 'Legal Notice', channel: 'Email', content: 'This is a legal notice regarding your outstanding balance.' },
-  { id: '4', name: 'WhatsApp Reminder', channel: 'WhatsApp', content: 'Hi {name}! Quick reminder about your upcoming payment.' },
-  { id: '5', name: 'Urgent Collection', channel: 'SMS', content: 'URGENT: Please contact us regarding your account.' },
-  { id: '6', name: 'Settlement Offer', channel: 'Email', content: 'Special settlement offer for your account.' },
-]
+const BASE_URL = '/strategies'
+const TEMPLATES_URL = '/templates'
 
-// Mock filter fields
-const mockFilterFields: FilterField[] = [
-  { id: 'dpd', name: 'Days Past Due (DPD)', type: 'number' },
-  { id: 'region', name: 'Region', type: 'select', options: ['North', 'South', 'East', 'West', 'Central'] },
-  { id: 'loanAmount', name: 'Loan Amount', type: 'number' },
-  { id: 'outstandingAmount', name: 'Outstanding Amount', type: 'number' },
-  { id: 'productType', name: 'Product Type', type: 'select', options: ['Personal Loan', 'Home Loan', 'Credit Card', 'Auto Loan'] },
-  { id: 'bucket', name: 'Bucket', type: 'select', options: ['X', '1', '2', '3', 'NPA'] },
-  { id: 'customerSegment', name: 'Customer Segment', type: 'select', options: ['Premium', 'Regular', 'High Risk'] },
-  { id: 'lastContactDate', name: 'Last Contact Date', type: 'date' },
-  { id: 'city', name: 'City', type: 'text' },
+// Available filter fields based on API documentation
+const FILTER_FIELDS: FilterField[] = [
+  // Numeric Fields
+  { id: 'DPD', name: 'Days Past Due (DPD)', type: 'number' },
+  { id: 'OVERDUE_AMOUNT', name: 'Overdue Amount', type: 'number' },
+  { id: 'LOAN_AMOUNT', name: 'Loan Amount', type: 'number' },
+  { id: 'EMI_AMOUNT', name: 'EMI Amount', type: 'number' },
+  { id: 'PAID_EMI', name: 'Paid EMI Count', type: 'number' },
+  { id: 'PENDING_EMI', name: 'Pending EMI Count', type: 'number' },
+  { id: 'POS', name: 'Principal Outstanding', type: 'number' },
+  { id: 'TOS', name: 'Total Outstanding', type: 'number' },
+  { id: 'PENALTY_AMOUNT', name: 'Penalty Amount', type: 'number' },
+  { id: 'LATE_FEES', name: 'Late Fees', type: 'number' },
+  { id: 'OD_INTEREST', name: 'Overdue Interest', type: 'number' },
+  { id: 'BUREAU_SCORE', name: 'Bureau Score', type: 'number' },
+  // Text Fields
+  { id: 'LANGUAGE', name: 'Language', type: 'select', options: ['HINDI', 'ENGLISH', 'MARATHI', 'TAMIL', 'TELUGU', 'KANNADA', 'GUJARATI', 'BENGALI'] },
+  { id: 'STATE', name: 'State', type: 'select', options: ['Maharashtra', 'Karnataka', 'Tamil Nadu', 'Gujarat', 'Delhi', 'Uttar Pradesh', 'West Bengal', 'Rajasthan'] },
+  { id: 'CITY', name: 'City', type: 'text' },
+  { id: 'PINCODE', name: 'Pincode', type: 'text' },
+  { id: 'STATUS', name: 'Case Status', type: 'select', options: ['ACTIVE', 'CLOSED', 'SETTLED', 'WRITTEN_OFF'] },
+  { id: 'CHANNEL', name: 'Communication Channel', type: 'select', options: ['SMS', 'WHATSAPP', 'EMAIL', 'IVR', 'NOTICE'] },
+  { id: 'SOURCE_TYPE', name: 'Source Type', type: 'text' },
+  { id: 'OWNERSHIP', name: 'Ownership', type: 'select', options: ['INTERNAL', 'AGENCY', 'HYBRID'] },
+  // Date Fields
+  { id: 'DUE_DATE', name: 'Due Date', type: 'date' },
+  { id: 'DISB_DATE', name: 'Disbursement Date', type: 'date' },
+  { id: 'EMI_START_DATE', name: 'EMI Start Date', type: 'date' },
+  { id: 'MATURITY_DATE', name: 'Maturity Date', type: 'date' },
+  { id: 'LAST_PAYMENT_DATE', name: 'Last Payment Date', type: 'date' },
+  { id: 'NEXT_EMI_DATE', name: 'Next EMI Date', type: 'date' },
 ]
-
-// Mock rules data
-let mockRules: Rule[] = [
-  {
-    id: '1',
-    name: '30+ DPD Payment Reminder',
-    description: 'Send SMS reminder to customers with 30+ days past due',
-    channel: 'SMS',
-    status: 'active',
-    eligibleCount: 1250,
-    nextRun: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-    lastRun: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    lastRunStatus: 'success',
-    templateId: '1',
-    templateName: 'Gentle Reminder',
-    ownership: 'internal',
-    priority: 1,
-    dpdTrigger: 30,
-    frequency: { type: 'daily', time: '09:00' },
-    filters: [
-      {
-        id: 'f1',
-        logic: 'AND',
-        conditions: [
-          { id: 'c1', field: 'dpd', operator: 'greater_than_or_equal', value: 30 },
-          { id: 'c2', field: 'dpd', operator: 'less_than', value: 60 },
-        ],
-      },
-    ],
-    createdAt: '2024-01-15T10:30:00Z',
-    updatedAt: '2024-01-20T14:00:00Z',
-  },
-  {
-    id: '2',
-    name: '60+ DPD Email Campaign',
-    description: 'Email campaign for 60+ DPD customers with legal notice',
-    channel: 'Email',
-    status: 'active',
-    eligibleCount: 850,
-    nextRun: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(),
-    lastRun: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-    lastRunStatus: 'success',
-    templateId: '3',
-    templateName: 'Legal Notice',
-    ownership: 'internal',
-    priority: 2,
-    dpdTrigger: 60,
-    frequency: { type: 'weekly', time: '10:00', dayOfWeek: 'Mon' },
-    filters: [
-      {
-        id: 'f2',
-        logic: 'AND',
-        conditions: [
-          { id: 'c3', field: 'dpd', operator: 'greater_than_or_equal', value: 60 },
-          { id: 'c4', field: 'outstandingAmount', operator: 'greater_than', value: 50000 },
-        ],
-      },
-    ],
-    createdAt: '2024-01-10T08:00:00Z',
-    updatedAt: '2024-01-18T16:30:00Z',
-  },
-  {
-    id: '3',
-    name: 'WhatsApp Quick Reminder',
-    description: 'WhatsApp reminder for 15+ DPD customers',
-    channel: 'WhatsApp',
-    status: 'active',
-    eligibleCount: 2100,
-    nextRun: new Date(Date.now() + 1 * 60 * 60 * 1000).toISOString(),
-    lastRun: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-    lastRunStatus: 'running',
-    templateId: '4',
-    templateName: 'WhatsApp Reminder',
-    ownership: 'internal',
-    priority: 1,
-    dpdTrigger: 15,
-    frequency: { type: 'daily', time: '11:00' },
-    filters: [
-      {
-        id: 'f3',
-        logic: 'AND',
-        conditions: [
-          { id: 'c5', field: 'dpd', operator: 'greater_than_or_equal', value: 15 },
-          { id: 'c6', field: 'dpd', operator: 'less_than', value: 30 },
-        ],
-      },
-    ],
-    createdAt: '2024-01-12T09:15:00Z',
-    updatedAt: '2024-01-19T11:00:00Z',
-  },
-  {
-    id: '4',
-    name: 'High Value Account Alert',
-    description: 'SMS alert for high value accounts with 45+ DPD',
-    channel: 'SMS',
-    status: 'inactive',
-    eligibleCount: 320,
-    lastRun: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(),
-    lastRunStatus: 'failed',
-    templateId: '5',
-    templateName: 'Urgent Collection',
-    ownership: 'agency',
-    priority: 3,
-    dpdTrigger: 45,
-    frequency: { type: 'monthly', time: '14:00', dayOfMonth: 1 },
-    filters: [
-      {
-        id: 'f4',
-        logic: 'AND',
-        conditions: [
-          { id: 'c7', field: 'dpd', operator: 'greater_than_or_equal', value: 45 },
-          { id: 'c8', field: 'loanAmount', operator: 'greater_than', value: 500000 },
-        ],
-      },
-    ],
-    createdAt: '2024-01-08T11:00:00Z',
-    updatedAt: '2024-01-17T09:30:00Z',
-  },
-  {
-    id: '5',
-    name: 'Settlement Offer Campaign',
-    description: 'Email settlement offers for 90+ DPD customers',
-    channel: 'Email',
-    status: 'active',
-    eligibleCount: 450,
-    nextRun: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    lastRun: new Date(Date.now() - 168 * 60 * 60 * 1000).toISOString(),
-    lastRunStatus: 'success',
-    templateId: '6',
-    templateName: 'Settlement Offer',
-    ownership: 'hybrid',
-    priority: 2,
-    dpdTrigger: 90,
-    frequency: { type: 'weekly', time: '09:00', dayOfWeek: 'Wed' },
-    filters: [
-      {
-        id: 'f5',
-        logic: 'AND',
-        conditions: [
-          { id: 'c9', field: 'dpd', operator: 'greater_than_or_equal', value: 90 },
-        ],
-      },
-    ],
-    createdAt: '2024-01-05T14:00:00Z',
-    updatedAt: '2024-01-16T10:00:00Z',
-  },
-]
-
-// Mock execution logs
-const mockExecutionLogs: ExecutionLog[] = [
-  {
-    id: 'log1',
-    runId: 'RUN-2024-001',
-    ruleId: '1',
-    ruleName: '30+ DPD Payment Reminder',
-    triggerType: 'scheduled',
-    startTime: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    endTime: new Date(Date.now() - 24 * 60 * 60 * 1000 + 300000).toISOString(),
-    duration: 300,
-    status: 'success',
-    totalProcessed: 1250,
-    successCount: 1235,
-    failedCount: 15,
-  },
-  {
-    id: 'log2',
-    runId: 'RUN-2024-002',
-    ruleId: '2',
-    ruleName: '60+ DPD Email Campaign',
-    triggerType: 'scheduled',
-    startTime: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-    endTime: new Date(Date.now() - 48 * 60 * 60 * 1000 + 450000).toISOString(),
-    duration: 450,
-    status: 'success',
-    totalProcessed: 850,
-    successCount: 842,
-    failedCount: 8,
-  },
-  {
-    id: 'log3',
-    runId: 'RUN-2024-003',
-    ruleId: '3',
-    ruleName: 'WhatsApp Quick Reminder',
-    triggerType: 'manual',
-    startTime: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-    status: 'running',
-    totalProcessed: 1500,
-    successCount: 1500,
-    failedCount: 0,
-  },
-  {
-    id: 'log4',
-    runId: 'RUN-2024-004',
-    ruleId: '4',
-    ruleName: 'High Value Account Alert',
-    triggerType: 'scheduled',
-    startTime: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(),
-    endTime: new Date(Date.now() - 72 * 60 * 60 * 1000 + 60000).toISOString(),
-    duration: 60,
-    status: 'failed',
-    totalProcessed: 320,
-    successCount: 0,
-    failedCount: 320,
-    errorMessage: 'SMS gateway connection timeout',
-  },
-  {
-    id: 'log5',
-    runId: 'RUN-2024-005',
-    ruleId: '1',
-    ruleName: '30+ DPD Payment Reminder',
-    triggerType: 'scheduled',
-    startTime: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-    endTime: new Date(Date.now() - 48 * 60 * 60 * 1000 + 280000).toISOString(),
-    duration: 280,
-    status: 'partial',
-    totalProcessed: 1180,
-    successCount: 1050,
-    failedCount: 130,
-  },
-]
-
-// Simulate API delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 export const strategyEngineService = {
-  /**
-   * Get dashboard stats
-   */
-  async getStats(): Promise<StrategyEngineStats> {
-    await delay(500)
-    const activeRules = mockRules.filter(r => r.status === 'active').length
-    const totalEligible = mockRules.reduce((sum, r) => sum + r.eligibleCount, 0)
-    const nextScheduled = mockRules
-      .filter(r => r.status === 'active' && r.nextRun)
-      .sort((a, b) => new Date(a.nextRun!).getTime() - new Date(b.nextRun!).getTime())[0]?.nextRun
+  // ============ Strategy CRUD APIs ============
 
-    return {
-      activeRules,
-      activeRulesTrend: 12.5,
-      totalEligible,
-      nextScheduledRun: nextScheduled,
-      successRate: 94.2,
-      successRateTrend: 2.3,
-    }
+  /**
+   * Create a new strategy
+   */
+  createStrategy: async (data: StrategyRequest): Promise<Strategy> => {
+    const response = await apiClient.post<ApiResponse<Strategy>>(
+      `${BASE_URL}/create`,
+      data
+    )
+    return response.data.payload!
   },
 
   /**
-   * Get all rules
+   * Update an existing strategy
    */
-  async getRules(page: number = 0, pageSize: number = 20, search?: string): Promise<RulesListResponse> {
-    await delay(500)
-    let filteredRules = [...mockRules]
-
-    if (search) {
-      const searchLower = search.toLowerCase()
-      filteredRules = filteredRules.filter(
-        r => r.name.toLowerCase().includes(searchLower) ||
-             r.channel.toLowerCase().includes(searchLower)
-      )
-    }
-
-    const start = page * pageSize
-    const end = start + pageSize
-    const paginatedRules = filteredRules.slice(start, end)
-
-    return {
-      rules: paginatedRules,
-      total: filteredRules.length,
-      page,
-      pageSize,
-    }
+  updateStrategy: async (strategyId: number, data: StrategyRequest): Promise<Strategy> => {
+    const response = await apiClient.put<ApiResponse<Strategy>>(
+      `${BASE_URL}/${strategyId}`,
+      data
+    )
+    return response.data.payload!
   },
 
   /**
-   * Get rule by ID
+   * Get strategy by ID
    */
-  async getRuleById(id: string): Promise<Rule | null> {
-    await delay(300)
-    return mockRules.find(r => r.id === id) || null
+  getStrategyById: async (strategyId: number): Promise<Strategy> => {
+    const response = await apiClient.get<ApiResponse<Strategy>>(
+      `${BASE_URL}/${strategyId}`
+    )
+    return response.data.payload!
   },
 
   /**
-   * Create new rule
+   * Get all strategies
    */
-  async createRule(data: RuleRequest): Promise<Rule> {
-    await delay(800)
-    const newRule: Rule = {
-      id: String(mockRules.length + 1),
-      ...data,
-      eligibleCount: Math.floor(Math.random() * 1000) + 100,
-      nextRun: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    mockRules.push(newRule)
-    return newRule
+  getStrategies: async (status?: string): Promise<Strategy[]> => {
+    const params = status ? { status } : undefined
+    const response = await apiClient.get<ApiResponse<Strategy[]>>(
+      BASE_URL,
+      { params }
+    )
+    return response.data.payload || []
   },
 
   /**
-   * Update rule
+   * Delete a strategy
    */
-  async updateRule(id: string, data: Partial<RuleRequest>): Promise<Rule> {
-    await delay(600)
-    const index = mockRules.findIndex(r => r.id === id)
-    if (index === -1) {
-      throw new Error('Rule not found')
-    }
-    mockRules[index] = {
-      ...mockRules[index],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    }
-    return mockRules[index]
+  deleteStrategy: async (strategyId: number): Promise<void> => {
+    await apiClient.delete(`${BASE_URL}/${strategyId}`)
   },
 
   /**
-   * Delete rule
+   * Update strategy status
+   * PATCH /strategies/{id}/status?status=ACTIVE|INACTIVE
    */
-  async deleteRule(id: string): Promise<void> {
-    await delay(500)
-    const index = mockRules.findIndex(r => r.id === id)
-    if (index === -1) {
-      throw new Error('Rule not found')
-    }
-    mockRules.splice(index, 1)
+  updateStrategyStatus: async (strategyId: number, status: string): Promise<Strategy> => {
+    const response = await apiClient.patch<ApiResponse<Strategy>>(
+      `${BASE_URL}/${strategyId}/status?status=${status}`,
+      {}
+    )
+    return response.data.payload!
+  },
+
+  // ============ Simulation & Execution APIs ============
+
+  /**
+   * Simulate strategy (preview matching cases)
+   */
+  simulateStrategy: async (strategyId: number): Promise<SimulationResult> => {
+    const response = await apiClient.post<ApiResponse<SimulationResult>>(
+      `${BASE_URL}/${strategyId}/simulate`
+    )
+    return response.data.payload!
   },
 
   /**
-   * Toggle rule status
+   * Execute strategy manually
    */
-  async toggleRuleStatus(id: string): Promise<Rule> {
-    await delay(400)
-    const index = mockRules.findIndex(r => r.id === id)
-    if (index === -1) {
-      throw new Error('Rule not found')
-    }
-    mockRules[index].status = mockRules[index].status === 'active' ? 'inactive' : 'active'
-    mockRules[index].updatedAt = new Date().toISOString()
-    return mockRules[index]
+  executeStrategy: async (strategyId: number): Promise<ExecutionInitiatedResponse> => {
+    const response = await apiClient.post<ApiResponse<ExecutionInitiatedResponse>>(
+      `${BASE_URL}/${strategyId}/execute`
+    )
+    return response.data.payload!
   },
 
   /**
-   * Run rule manually
+   * Enable/Disable scheduler for a strategy
    */
-  async runRuleManually(id: string): Promise<ExecutionLog> {
-    await delay(1000)
-    const rule = mockRules.find(r => r.id === id)
-    if (!rule) {
-      throw new Error('Rule not found')
-    }
+  toggleScheduler: async (strategyId: number, enabled: boolean): Promise<Strategy> => {
+    const response = await apiClient.patch<ApiResponse<Strategy>>(
+      `${BASE_URL}/${strategyId}/scheduler`,
+      null,
+      { params: { enabled } }
+    )
+    return response.data.payload!
+  },
 
-    // Update rule's last run status to running
-    rule.lastRunStatus = 'running'
-    rule.lastRun = new Date().toISOString()
+  // ============ Dashboard API ============
 
-    const log: ExecutionLog = {
-      id: `log${mockExecutionLogs.length + 1}`,
-      runId: `RUN-2024-${String(mockExecutionLogs.length + 1).padStart(3, '0')}`,
-      ruleId: rule.id,
-      ruleName: rule.name,
-      triggerType: 'manual',
-      startTime: new Date().toISOString(),
-      status: 'running',
-      totalProcessed: 0,
-      successCount: 0,
-      failedCount: 0,
-    }
+  /**
+   * Get dashboard with summary and all strategies
+   */
+  getDashboard: async (): Promise<DashboardResponse> => {
+    const response = await apiClient.get<ApiResponse<DashboardResponse>>(
+      `${BASE_URL}/dashboard`
+    )
+    return response.data.payload!
+  },
 
-    mockExecutionLogs.unshift(log)
+  // ============ Execution History APIs ============
 
-    // Simulate completion after 3 seconds
-    setTimeout(() => {
-      log.status = 'success'
-      log.endTime = new Date().toISOString()
-      log.duration = 3
-      log.totalProcessed = rule.eligibleCount
-      log.successCount = Math.floor(rule.eligibleCount * 0.98)
-      log.failedCount = rule.eligibleCount - log.successCount
-      rule.lastRunStatus = 'success'
-    }, 3000)
-
-    return log
+  /**
+   * Get all execution runs
+   */
+  getExecutions: async (): Promise<StrategyExecution[]> => {
+    const response = await apiClient.get<ApiResponse<StrategyExecution[]>>(
+      `${BASE_URL}/executions`
+    )
+    return response.data.payload || []
   },
 
   /**
-   * Get execution logs
+   * Get execution details by ID
    */
-  async getExecutionLogs(
-    page: number = 0,
-    pageSize: number = 20,
-    ruleId?: string
-  ): Promise<ExecutionLogsResponse> {
-    await delay(500)
-    let filteredLogs = [...mockExecutionLogs]
-
-    if (ruleId) {
-      filteredLogs = filteredLogs.filter(l => l.ruleId === ruleId)
-    }
-
-    // Sort by start time descending
-    filteredLogs.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
-
-    const start = page * pageSize
-    const end = start + pageSize
-    const paginatedLogs = filteredLogs.slice(start, end)
-
-    return {
-      logs: paginatedLogs,
-      total: filteredLogs.length,
-      page,
-      pageSize,
-    }
+  getExecutionById: async (executionId: string): Promise<StrategyExecution> => {
+    const response = await apiClient.get<ApiResponse<StrategyExecution>>(
+      `${BASE_URL}/executions/${executionId}`
+    )
+    return response.data.payload!
   },
 
   /**
-   * Get available templates
+   * Get detailed execution run info including errors
    */
-  async getTemplates(channel?: string): Promise<RuleTemplate[]> {
-    await delay(300)
-    if (channel) {
-      return mockTemplates.filter(t => t.channel === channel)
-    }
-    return mockTemplates
+  getExecutionDetails: async (executionId: string): Promise<StrategyExecutionDetail> => {
+    const response = await apiClient.get<ApiResponse<StrategyExecutionDetail>>(
+      `${BASE_URL}/executions/${executionId}/details`
+    )
+    return response.data.payload!
   },
+
+  // ============ Template APIs ============
+
+  /**
+   * Get templates for dropdown by channel
+   */
+  getTemplatesByChannel: async (channel: CommunicationChannel): Promise<RuleTemplate[]> => {
+    const response = await apiClient.get<ApiResponse<RuleTemplate[]>>(
+      `${TEMPLATES_URL}/dropdown/${channel}`
+    )
+    return response.data.payload || []
+  },
+
+  // ============ Helper/Utility Methods ============
 
   /**
    * Get available filter fields
    */
-  async getFilterFields(): Promise<FilterField[]> {
-    await delay(200)
-    return mockFilterFields
+  getFilterFields: async (): Promise<FilterField[]> => {
+    // Return predefined filter fields based on API documentation
+    return Promise.resolve(FILTER_FIELDS)
+  },
+
+  // ============ Legacy Methods for Backward Compatibility ============
+  // These methods maintain compatibility with existing components
+
+  /**
+   * Get dashboard stats (legacy format)
+   */
+  getStats: async (): Promise<StrategyEngineStats> => {
+    const dashboard = await strategyEngineService.getDashboard()
+    const { summary, strategies } = dashboard
+
+    // Find next scheduled run
+    const nextRun = strategies
+      .filter(s => s.status === 'ACTIVE' && s.nextRun)
+      .sort((a, b) => new Date(a.nextRun!).getTime() - new Date(b.nextRun!).getTime())[0]?.nextRun
+
+    return {
+      activeRules: summary.activeStrategies,
+      activeRulesTrend: 0, // Not provided by API
+      totalEligible: summary.totalExecutions,
+      nextScheduledRun: nextRun || undefined,
+      successRate: summary.overallSuccessRate,
+      successRateTrend: 0, // Not provided by API
+    }
+  },
+
+  /**
+   * Get rules (legacy format - maps strategies to rules)
+   */
+  getRules: async (page: number = 0, pageSize: number = 20, search?: string): Promise<RulesListResponse> => {
+    const strategies = await strategyEngineService.getStrategies()
+
+    // Filter by search if provided
+    let filtered = strategies
+    if (search) {
+      const searchLower = search.toLowerCase()
+      filtered = strategies.filter(s =>
+        s.strategyName.toLowerCase().includes(searchLower) ||
+        s.channel.type.toLowerCase().includes(searchLower)
+      )
+    }
+
+    // Map to legacy format
+    const rules: Rule[] = filtered.map(s => ({
+      id: String(s.strategyId),
+      name: s.strategyName,
+      description: s.description,
+      channel: s.channel.type === 'WHATSAPP' ? 'WhatsApp' as const : s.channel.type === 'EMAIL' ? 'Email' as const : s.channel.type as 'SMS' | 'IVR' | 'PushNotification',
+      status: s.status === 'ACTIVE' ? 'active' as const : 'inactive' as const,
+      eligibleCount: s.filters.estimatedCasesMatched || 0,
+      nextRun: s.schedule.nextRunAt || undefined,
+      lastRun: s.lastRunAt || undefined,
+      lastRunStatus: s.successCount > 0 ? 'success' as const : s.failureCount > 0 ? 'failed' as const : undefined,
+      templateId: s.channel.templateId,
+      templateName: s.channel.templateName,
+      ownership: 'internal' as const,
+      priority: s.priority,
+      dpdTrigger: s.filters.dpdRange ? parseInt(s.filters.dpdRange.replace(/[^\d]/g, '')) : undefined,
+      frequency: {
+        type: s.schedule.frequency.toLowerCase() as 'daily' | 'weekly' | 'monthly',
+        time: s.schedule.time,
+        dayOfWeek: s.schedule.days?.[0]?.slice(0, 3) as 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun' | undefined,
+        days: s.schedule.days?.map(d => d.slice(0, 3) as 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun'),
+        dayOfMonth: s.schedule.dayOfMonth || undefined,
+      },
+      filters: [] as FilterGroup[],
+      // Include API filter data for edit mode
+      apiFilters: {
+        language: s.filters.language || undefined,
+        product: s.filters.product || undefined,
+        state: s.filters.state || undefined,
+        city: s.filters.city || undefined,
+        pincode: s.filters.pincode || undefined,
+        dpdRange: s.filters.dpdRange || undefined,
+        outstandingAmount: s.filters.outstandingAmount || undefined,
+        bucket: s.filters.bucket || undefined,
+      },
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
+    }))
+
+    // Paginate
+    const start = page * pageSize
+    const end = start + pageSize
+    const paginatedRules = rules.slice(start, end)
+
+    return {
+      rules: paginatedRules,
+      total: rules.length,
+      page,
+      pageSize,
+    }
+  },
+
+  /**
+   * Delete rule (legacy - wraps deleteStrategy)
+   */
+  deleteRule: async (id: string): Promise<void> => {
+    await strategyEngineService.deleteStrategy(parseInt(id))
+  },
+
+  /**
+   * Toggle rule status (legacy - wraps updateStrategyStatus)
+   */
+  toggleRuleStatus: async (id: string): Promise<void> => {
+    const strategy = await strategyEngineService.getStrategyById(parseInt(id))
+    const newStatus = strategy.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
+    await strategyEngineService.updateStrategyStatus(parseInt(id), newStatus)
+  },
+
+  /**
+   * Run rule manually (legacy - wraps executeStrategy)
+   */
+  runRuleManually: async (id: string): Promise<ExecutionInitiatedResponse> => {
+    return strategyEngineService.executeStrategy(parseInt(id))
+  },
+
+  /**
+   * Get execution logs (legacy format)
+   */
+  getExecutionLogs: async (page: number = 0, pageSize: number = 20, ruleId?: string): Promise<ExecutionLogsResponse> => {
+    const executions = await strategyEngineService.getExecutions()
+
+    // Filter by ruleId if provided
+    let filtered = executions
+    if (ruleId) {
+      filtered = executions.filter(e => String(e.strategyId) === ruleId)
+    }
+
+    // Map execution status to legacy format
+    const mapStatus = (status: string): 'success' | 'failed' | 'running' | 'partial' => {
+      switch (status) {
+        case 'COMPLETED': return 'success'
+        case 'FAILED': return 'failed'
+        case 'RUNNING':
+        case 'INITIATED': return 'running'
+        case 'PARTIAL': return 'partial'
+        default: return 'running'
+      }
+    }
+
+    // Map to legacy format (using new backend field names)
+    const logs = filtered.map(e => {
+      const startTime = new Date(e.startedAt)
+      const endTime = e.completedAt ? new Date(e.completedAt) : null
+      const duration = endTime ? Math.floor((endTime.getTime() - startTime.getTime()) / 1000) : undefined
+
+      return {
+        id: e.executionId,
+        runId: e.executionId,
+        ruleId: String(e.strategyId),
+        ruleName: e.strategyName,
+        triggerType: 'scheduled' as const,
+        startTime: e.startedAt,
+        endTime: e.completedAt || undefined,
+        duration,
+        status: mapStatus(e.status),
+        totalProcessed: e.totalCasesProcessed,
+        successCount: e.successfulActions,
+        failedCount: e.failedActions,
+        errorMessage: e.errorSummary || undefined,
+      }
+    })
+
+    // Sort by start time descending
+    logs.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+
+    // Paginate
+    const start = page * pageSize
+    const end = start + pageSize
+    const paginatedLogs = logs.slice(start, end)
+
+    return {
+      logs: paginatedLogs,
+      total: logs.length,
+      page,
+      pageSize,
+    }
+  },
+
+  /**
+   * Get templates (legacy format)
+   */
+  getTemplates: async (channel?: string): Promise<RuleTemplate[]> => {
+    if (channel) {
+      // Map legacy channel names
+      const channelMap: Record<string, CommunicationChannel> = {
+        'SMS': 'SMS',
+        'Email': 'EMAIL',
+        'WhatsApp': 'WHATSAPP',
+        'IVR': 'IVR',
+        'PushNotification': 'NOTICE',
+      }
+      const apiChannel = channelMap[channel] || channel as CommunicationChannel
+      return strategyEngineService.getTemplatesByChannel(apiChannel)
+    }
+
+    // If no channel specified, return empty array (must select channel first)
+    return []
+  },
+
+  /**
+   * Create rule (legacy - wraps createStrategy)
+   */
+  createRule: async (data: {
+    name: string
+    description?: string
+    channel: string
+    status: string
+    templateId?: string
+    templateName?: string
+    ownership: string
+    priority?: number
+    dpdTrigger?: number
+    frequency: { type: string; time: string; dayOfWeek?: string; dayOfMonth?: number; days?: string[] }
+    filters: Array<{ id: string; logic: string; conditions: Array<{ id: string; field: string; operator: string; value: string | number | string[] }> }>
+    apiFilters?: Array<{ field: string; filterType: 'TEXT' | 'NUMERIC' | 'DATE'; operator: string; value1?: string; value2?: string; values?: string[] }>
+  }): Promise<Strategy> => {
+    // Map legacy channel names to new format
+    const channelMap: Record<string, CommunicationChannel> = {
+      'SMS': 'SMS',
+      'Email': 'EMAIL',
+      'WhatsApp': 'WHATSAPP',
+      'WHATSAPP': 'WHATSAPP',
+      'EMAIL': 'EMAIL',
+      'IVR': 'IVR',
+      'PushNotification': 'NOTICE',
+      'NOTICE': 'NOTICE',
+    }
+
+    // Map frequency type
+    const frequencyMap: Record<string, 'DAILY' | 'WEEKLY' | 'MONTHLY'> = {
+      'daily': 'DAILY',
+      'weekly': 'WEEKLY',
+      'monthly': 'MONTHLY',
+    }
+
+    // Map day of week to full day name
+    const dayMap: Record<string, 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY'> = {
+      'Mon': 'MONDAY',
+      'Tue': 'TUESDAY',
+      'Wed': 'WEDNESDAY',
+      'Thu': 'THURSDAY',
+      'Fri': 'FRIDAY',
+      'Sat': 'SATURDAY',
+      'Sun': 'SUNDAY',
+    }
+
+    // Use apiFilters if available (from new wizard), otherwise convert legacy filters
+    let filters: StrategyFilter[] = []
+
+    if (data.apiFilters && data.apiFilters.length > 0) {
+      // Use the pre-formatted API filters from the wizard
+      filters = data.apiFilters.map(f => ({
+        field: f.field,
+        filterType: f.filterType,
+        operator: f.operator as '>=' | '<=' | '=' | '>' | '<' | 'RANGE' | 'BETWEEN' | 'IN',
+        value1: f.value1,
+        value2: f.value2,
+        values: f.values,
+      }))
+    } else {
+      // Convert legacy filters format
+      filters = data.filters.flatMap(group =>
+        group.conditions.map(c => {
+          const field = FILTER_FIELDS.find(f => f.id === c.field)
+          const filterType = field?.type === 'number' ? 'NUMERIC' : field?.type === 'date' ? 'DATE' : 'TEXT'
+
+          // Map operators
+          const opMap: Record<string, '>=' | '<=' | '=' | '>' | '<' | 'RANGE' | 'BETWEEN' | 'IN'> = {
+            'equals': '=',
+            'greater_than': '>',
+            'less_than': '<',
+            'greater_than_or_equal': '>=',
+            'less_than_or_equal': '<=',
+            'in': 'IN',
+          }
+
+          return {
+            field: c.field,
+            filterType: filterType as 'TEXT' | 'NUMERIC' | 'DATE',
+            operator: opMap[c.operator] || '=' as const,
+            value1: String(c.value),
+          }
+        })
+      )
+    }
+
+    // Add DPD filter if specified and not already in apiFilters
+    if (data.dpdTrigger) {
+      const hasDpdFilter = filters.some(f => f.field === 'DPD')
+      if (!hasDpdFilter) {
+        filters.push({
+          field: 'DPD',
+          filterType: 'NUMERIC',
+          operator: '>=',
+          value1: String(data.dpdTrigger),
+        })
+      }
+    }
+
+    // Build schedule days array based on frequency type
+    let scheduleDays: ('MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY')[] | undefined
+
+    if (data.frequency.type === 'daily') {
+      // For daily frequency, include weekdays by default
+      scheduleDays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
+    } else if (data.frequency.type === 'weekly') {
+      // For weekly, use provided days array or single dayOfWeek
+      if (data.frequency.days && data.frequency.days.length > 0) {
+        scheduleDays = data.frequency.days.map(d => dayMap[d]).filter(Boolean) as ('MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY')[]
+      } else if (data.frequency.dayOfWeek) {
+        scheduleDays = [dayMap[data.frequency.dayOfWeek]]
+      }
+    }
+
+    const request: StrategyRequest = {
+      strategyName: data.name,
+      status: data.status === 'active' ? 'ACTIVE' : 'DRAFT',
+      priority: data.priority || 1,
+      description: data.description,
+      channel: {
+        type: channelMap[data.channel] || 'SMS',
+        templateName: data.templateName || 'Default Template',
+        templateId: data.templateId,
+      },
+      filters,
+      schedule: {
+        frequency: frequencyMap[data.frequency.type] || 'DAILY',
+        time: data.frequency.time,
+        days: scheduleDays,
+        dayOfMonth: data.frequency.dayOfMonth,
+      },
+    }
+
+    // Debug: Log the request being sent to the API
+    console.log('Creating Strategy - API Request:', JSON.stringify(request, null, 2))
+
+    return strategyEngineService.createStrategy(request)
+  },
+
+  /**
+   * Update rule (legacy - wraps updateStrategy)
+   */
+  updateRule: async (id: string, data: {
+    name: string
+    description?: string
+    channel: string
+    status: string
+    templateId?: string
+    templateName?: string
+    ownership: string
+    priority?: number
+    dpdTrigger?: number
+    frequency: { type: string; time: string; dayOfWeek?: string; dayOfMonth?: number; days?: string[] }
+    filters: Array<{ id: string; logic: string; conditions: Array<{ id: string; field: string; operator: string; value: string | number | string[] }> }>
+    apiFilters?: Array<{ field: string; filterType: 'TEXT' | 'NUMERIC' | 'DATE'; operator: string; value1?: string; value2?: string; values?: string[] }>
+  }): Promise<Strategy> => {
+    // Use same mapping logic as createRule
+    const channelMap: Record<string, CommunicationChannel> = {
+      'SMS': 'SMS',
+      'Email': 'EMAIL',
+      'WhatsApp': 'WHATSAPP',
+      'WHATSAPP': 'WHATSAPP',
+      'EMAIL': 'EMAIL',
+      'IVR': 'IVR',
+      'PushNotification': 'NOTICE',
+      'NOTICE': 'NOTICE',
+    }
+
+    const frequencyMap: Record<string, 'DAILY' | 'WEEKLY' | 'MONTHLY'> = {
+      'daily': 'DAILY',
+      'weekly': 'WEEKLY',
+      'monthly': 'MONTHLY',
+    }
+
+    const dayMap: Record<string, 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY'> = {
+      'Mon': 'MONDAY',
+      'Tue': 'TUESDAY',
+      'Wed': 'WEDNESDAY',
+      'Thu': 'THURSDAY',
+      'Fri': 'FRIDAY',
+      'Sat': 'SATURDAY',
+      'Sun': 'SUNDAY',
+    }
+
+    // Use apiFilters if available (from new wizard), otherwise convert legacy filters
+    let filters: StrategyFilter[] = []
+
+    if (data.apiFilters && data.apiFilters.length > 0) {
+      // Use the pre-formatted API filters from the wizard
+      filters = data.apiFilters.map(f => ({
+        field: f.field,
+        filterType: f.filterType,
+        operator: f.operator as '>=' | '<=' | '=' | '>' | '<' | 'RANGE' | 'BETWEEN' | 'IN',
+        value1: f.value1,
+        value2: f.value2,
+        values: f.values,
+      }))
+    } else {
+      // Convert legacy filters format
+      filters = data.filters.flatMap(group =>
+        group.conditions.map(c => {
+          const field = FILTER_FIELDS.find(f => f.id === c.field)
+          const filterType = field?.type === 'number' ? 'NUMERIC' : field?.type === 'date' ? 'DATE' : 'TEXT'
+
+          const opMap: Record<string, '>=' | '<=' | '=' | '>' | '<' | 'RANGE' | 'BETWEEN' | 'IN'> = {
+            'equals': '=',
+            'greater_than': '>',
+            'less_than': '<',
+            'greater_than_or_equal': '>=',
+            'less_than_or_equal': '<=',
+            'in': 'IN',
+          }
+
+          return {
+            field: c.field,
+            filterType: filterType as 'TEXT' | 'NUMERIC' | 'DATE',
+            operator: opMap[c.operator] || '=' as const,
+            value1: String(c.value),
+          }
+        })
+      )
+    }
+
+    // Add DPD filter if specified and not already present
+    if (data.dpdTrigger) {
+      const hasDpdFilter = filters.some(f => f.field === 'DPD')
+      if (!hasDpdFilter) {
+        filters.push({
+          field: 'DPD',
+          filterType: 'NUMERIC',
+          operator: '>=',
+          value1: String(data.dpdTrigger),
+        })
+      }
+    }
+
+    // Build schedule days array based on frequency type
+    let scheduleDays: ('MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY')[] | undefined
+
+    if (data.frequency.type === 'daily') {
+      // For daily frequency, include weekdays by default
+      scheduleDays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
+    } else if (data.frequency.type === 'weekly') {
+      // For weekly, use provided days array or single dayOfWeek
+      if (data.frequency.days && data.frequency.days.length > 0) {
+        scheduleDays = data.frequency.days.map(d => dayMap[d]).filter(Boolean) as ('MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY')[]
+      } else if (data.frequency.dayOfWeek) {
+        scheduleDays = [dayMap[data.frequency.dayOfWeek]]
+      }
+    }
+
+    const request: StrategyRequest = {
+      strategyName: data.name,
+      status: data.status === 'active' ? 'ACTIVE' : data.status === 'inactive' ? 'INACTIVE' : 'DRAFT',
+      priority: data.priority || 1,
+      description: data.description,
+      channel: {
+        type: channelMap[data.channel] || 'SMS',
+        templateName: data.templateName || 'Default Template',
+        templateId: data.templateId,
+      },
+      filters,
+      schedule: {
+        frequency: frequencyMap[data.frequency.type] || 'DAILY',
+        time: data.frequency.time,
+        days: scheduleDays,
+        dayOfMonth: data.frequency.dayOfMonth,
+      },
+    }
+
+    return strategyEngineService.updateStrategy(parseInt(id), request)
   },
 }
 
