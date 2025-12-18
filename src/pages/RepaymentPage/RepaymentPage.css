@@ -1,0 +1,742 @@
+/**
+ * Repayment Page Styles
+ */
+
+.repayment-page {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Header */
+.repayment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.repayment-header__content {
+  flex: 1;
+}
+
+.repayment-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0 0 4px 0;
+}
+
+.repayment-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.repayment-header__actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* Stats Grid */
+.repayment-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1200px) {
+  .repayment-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .repayment-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.repayment-stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+}
+
+.repayment-stat-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.repayment-stat-card__icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.repayment-stat-card--blue .repayment-stat-card__icon {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.repayment-stat-card--green .repayment-stat-card__icon {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.repayment-stat-card--red .repayment-stat-card__icon {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.repayment-stat-card--orange .repayment-stat-card__icon {
+  background: #ffedd5;
+  color: #ea580c;
+}
+
+.repayment-stat-card--purple .repayment-stat-card__icon {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.repayment-stat-card__content {
+  flex: 1;
+}
+
+.repayment-stat-card__value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a2e;
+  line-height: 1;
+}
+
+.repayment-stat-card__label {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.repayment-stat-card__amount {
+  font-size: 14px;
+  font-weight: 600;
+  color: #059669;
+  margin-top: 4px;
+}
+
+/* Progress Card */
+.repayment-progress-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  margin-bottom: 24px;
+}
+
+.repayment-progress-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.repayment-progress-card__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.repayment-progress-card__percentage {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.repayment-progress-card__bar {
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.repayment-progress-card__fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb 0%, #059669 100%);
+  border-radius: 6px;
+  transition: width 0.5s ease;
+}
+
+.repayment-progress-card__stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.repayment-progress-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.repayment-progress-stat__label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.repayment-progress-stat__value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+/* Tabs */
+.repayment-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0;
+}
+
+.repayment-tab {
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s;
+}
+
+.repayment-tab:hover {
+  color: #1a1a2e;
+}
+
+.repayment-tab--active {
+  color: #2563eb;
+}
+
+.repayment-tab--active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #2563eb;
+  border-radius: 2px 2px 0 0;
+}
+
+/* Content Grid */
+.repayment-content-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1024px) {
+  .repayment-content-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .repayment-content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Cards */
+.repayment-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.repayment-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.repayment-card__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.repayment-card__body {
+  padding: 16px 20px;
+}
+
+/* Breakdown List */
+.breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.breakdown-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.breakdown-item--total {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+}
+
+.breakdown-item__label {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.breakdown-item__value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.breakdown-item__value--success {
+  color: #059669;
+}
+
+.breakdown-item__value--warning {
+  color: #d97706;
+}
+
+.breakdown-item__value--danger {
+  color: #dc2626;
+}
+
+/* SLA Gauge */
+.sla-gauge {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.sla-gauge__circle {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.sla-gauge__circle svg {
+  width: 100%;
+  height: 100%;
+}
+
+.sla-gauge__bg {
+  stroke: #e5e7eb;
+}
+
+.sla-gauge__fill {
+  stroke: #059669;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.5s ease;
+}
+
+.sla-gauge__value {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.sla-stats {
+  display: flex;
+  justify-content: space-around;
+  text-align: center;
+}
+
+.sla-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sla-stat__value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #059669;
+}
+
+.sla-stat__value--warning {
+  color: #d97706;
+}
+
+.sla-stat__value--danger {
+  color: #dc2626;
+}
+
+.sla-stat__label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Repayment List */
+.repayment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.repayment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.repayment-item:hover {
+  background: #f3f4f6;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.repayment-item__info {
+  flex: 1;
+}
+
+.repayment-item__number {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a2e;
+  font-family: monospace;
+}
+
+.repayment-item__customer {
+  font-size: 13px;
+  color: #374151;
+  margin-top: 2px;
+}
+
+.repayment-item__meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.repayment-item__details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.repayment-item__amount {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+/* SLA Badge */
+.sla-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 9999px;
+}
+
+.sla-badge.sla--ok {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.sla-badge.sla--warning {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.sla-badge.sla--critical {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Quick Actions */
+.quick-actions {
+  margin-top: 24px;
+}
+
+.quick-actions__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0 0 16px 0;
+}
+
+.quick-actions__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1024px) {
+  .quick-actions__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .quick-actions__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.quick-action-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quick-action-card:hover {
+  border-color: #2563eb;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+  transform: translateY(-2px);
+}
+
+.quick-action-card__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quick-action-card__icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.quick-action-card__icon--blue {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.quick-action-card__icon--green {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.quick-action-card__icon--purple {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.quick-action-card__icon--orange {
+  background: #ffedd5;
+  color: #ea580c;
+}
+
+.quick-action-card__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 9999px;
+}
+
+.badge--success {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.badge--warning {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.badge--danger {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.badge--info {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.badge--default {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Buttons */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  background: #2563eb;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.btn-primary svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.btn-secondary svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-link {
+  padding: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #2563eb;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}
+
+/* Alert */
+.alert {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.alert--error {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.alert--success {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.alert button {
+  padding: 4px 12px;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  cursor: pointer;
+  color: inherit;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 32px;
+  color: #6b7280;
+}
+
+/* Loading */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 400px;
+  color: #6b7280;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -48,6 +48,16 @@ export const ROUTES = {
   ALLOCATED_CASES: '/allocation/cases',
   // Template Management Routes
   TEMPLATE_MANAGEMENT: '/template-management',
+  // Repayment Routes
+  REPAYMENT: '/repayment',
+  REPAYMENT_LIST: '/repayment/list',
+  REPAYMENT_DETAIL: '/repayment/:repaymentId',
+  REPAYMENT_APPROVALS: '/repayment/approvals',
+  REPAYMENT_RECONCILIATION: '/repayment/reconciliation',
+  REPAYMENT_DIGITAL_PAYMENT: '/repayment/digital-payment',
+  // Workflow Routes
+  WORKFLOW: '/workflow',
+  WORKFLOW_CASE_DETAIL: '/workflow/case/:caseId',
   NOT_FOUND: '*',
 } as const
 

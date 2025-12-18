@@ -267,7 +267,7 @@ export const allocationService = {
         },
       }
     )
-    return response.data.payload
+    return response.data.payload || []
   },
 
   // ============ Batch APIs ============
