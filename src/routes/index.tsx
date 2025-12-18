@@ -38,6 +38,14 @@ import {
   AllocationBatchDetailPage,
   AllocatedCasesPage,
   TemplateManagementPage,
+  RepaymentPage,
+  RepaymentListPage,
+  RepaymentDetailPage,
+  RepaymentApprovalPage,
+  ReconciliationPage,
+  DigitalPaymentPage,
+  WorkflowPage,
+  WorkflowCaseDetailPage,
 } from '@pages'
 import { ProtectedRoute } from './ProtectedRoute'
 import { ROUTES } from '@config/constants'
@@ -101,6 +109,18 @@ export function AppRoutes() {
 
         {/* Template Management routes */}
         <Route path={ROUTES.TEMPLATE_MANAGEMENT} element={<TemplateManagementPage />} />
+
+        {/* Repayment routes */}
+        <Route path={ROUTES.REPAYMENT} element={<RepaymentPage />} />
+        <Route path={ROUTES.REPAYMENT_LIST} element={<RepaymentListPage />} />
+        <Route path={ROUTES.REPAYMENT_DETAIL} element={<RepaymentDetailPage />} />
+        <Route path={ROUTES.REPAYMENT_APPROVALS} element={<RepaymentApprovalPage />} />
+        <Route path={ROUTES.REPAYMENT_RECONCILIATION} element={<ReconciliationPage />} />
+        <Route path={ROUTES.REPAYMENT_DIGITAL_PAYMENT} element={<DigitalPaymentPage />} />
+
+        {/* Workflow routes */}
+        <Route path={ROUTES.WORKFLOW} element={<WorkflowPage />} />
+        <Route path={ROUTES.WORKFLOW_CASE_DETAIL} element={<WorkflowCaseDetailPage />} />
       </Route>
 
       {/* 404 Not Found */}

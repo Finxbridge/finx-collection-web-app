@@ -213,9 +213,17 @@
   color: #6b7280;
   transition: color 0.2s ease, background 0.2s ease;
   z-index: 2;
+  border: none;
   border-left: 1px solid #e5e7eb;
   background: #f3f4f6;
   border-radius: 0 6px 6px 0;
+  padding: 0;
+  outline: none;
+}
+
+.input-icon--right:focus-visible {
+  outline: 2px solid #667eea;
+  outline-offset: -2px;
 }
 
 .input-icon--right:hover {

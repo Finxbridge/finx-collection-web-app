@@ -48,3 +48,15 @@ export { AllocatedCasesPage } from './AllocatedCasesPage/AllocatedCasesPage'
 
 // Template Management pages
 export { TemplateManagementPage } from './TemplateManagementPage'
+
+// Repayment pages
+export { RepaymentPage } from './RepaymentPage/RepaymentPage'
+export { RepaymentListPage } from './RepaymentListPage/RepaymentListPage'
+export { RepaymentDetailPage } from './RepaymentDetailPage/RepaymentDetailPage'
+export { RepaymentApprovalPage } from './RepaymentApprovalPage/RepaymentApprovalPage'
+export { ReconciliationPage } from './ReconciliationPage/ReconciliationPage'
+export { DigitalPaymentPage } from './DigitalPaymentPage/DigitalPaymentPage'
+
+// Workflow pages
+export { WorkflowPage } from './WorkflowPage/WorkflowPage'
+export { WorkflowCaseDetailPage } from './WorkflowCaseDetailPage/WorkflowCaseDetailPage'

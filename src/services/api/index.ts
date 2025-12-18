@@ -17,6 +17,11 @@ import {
   reallocationService as reallocationServiceImport,
   failureAnalysisService as failureAnalysisServiceImport,
 } from './allocation.service'
+import {
+  repaymentService as repaymentServiceImport,
+  digitalPaymentService as digitalPaymentServiceImport,
+} from './repayment.service'
+import { workflowService as workflowServiceImport } from './workflow.service'
 
 export { apiClient } from './axios.config'
 export { authService } from './auth.service'
@@ -34,6 +39,8 @@ export {
   reallocationService,
   failureAnalysisService,
 } from './allocation.service'
+export { repaymentService, digitalPaymentService } from './repayment.service'
+export { workflowService } from './workflow.service'
 
 // Export a combined API object for convenient access
 export const api = {
@@ -50,6 +57,9 @@ export const api = {
   allocation: allocationServiceImport,
   reallocation: reallocationServiceImport,
   failureAnalysis: failureAnalysisServiceImport,
+  repayment: repaymentServiceImport,
+  digitalPayment: digitalPaymentServiceImport,
+  workflow: workflowServiceImport,
 }
 
 export default api

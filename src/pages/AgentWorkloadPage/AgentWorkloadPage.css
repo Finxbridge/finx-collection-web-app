@@ -187,33 +187,44 @@
   border-color: #2563eb;
 }
 
-/* Agent Grid */
-.agent-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
-}
-
-/* Agent Card */
-.agent-card {
+/* Agent List */
+.agent-list {
+  display: flex;
+  flex-direction: column;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid #e5e7eb;
-  overflow: hidden;
 }
 
-.agent-card__header {
+/* Agent Row */
+.agent-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.2s;
+}
+
+.agent-row:last-child {
+  border-bottom: none;
+}
+
+.agent-row:hover {
+  background: #f9fafb;
+}
+
+.agent-row__info {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px;
-  border-bottom: 1px solid #f3f4f6;
+  min-width: 200px;
+  flex-shrink: 0;
 }
 
-.agent-card__avatar {
-  width: 44px;
-  height: 44px;
+.agent-row__avatar {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: #f3f4f6;
   display: flex;
@@ -223,18 +234,17 @@
   flex-shrink: 0;
 }
 
-.agent-card__avatar svg {
-  width: 24px;
-  height: 24px;
+.agent-row__avatar svg {
+  width: 18px;
+  height: 18px;
 }
 
-.agent-card__info {
-  flex: 1;
+.agent-row__details {
   min-width: 0;
 }
 
-.agent-card__name {
-  font-size: 15px;
+.agent-row__name {
+  font-size: 14px;
   font-weight: 600;
   color: #1a1a2e;
   margin: 0;
@@ -243,17 +253,92 @@
   text-overflow: ellipsis;
 }
 
-.agent-card__geography {
-  font-size: 13px;
+.agent-row__geography {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.agent-row__progress {
+  flex: 1;
+  min-width: 150px;
+  max-width: 250px;
+}
+
+.agent-row__progress-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.agent-row__progress-label {
+  color: #6b7280;
+}
+
+.agent-row__progress-value {
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.agent-row__progress-bar {
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.agent-row__progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.agent-row__progress-fill.utilization--low {
+  background: #10b981;
+}
+
+.agent-row__progress-fill.utilization--medium {
+  background: #f59e0b;
+}
+
+.agent-row__progress-fill.utilization--high {
+  background: #f97316;
+}
+
+.agent-row__progress-fill.utilization--critical {
+  background: #ef4444;
+}
+
+.agent-row__stats {
+  display: flex;
+  gap: 16px;
+}
+
+.agent-row__stat {
+  text-align: center;
+  min-width: 60px;
+}
+
+.agent-row__stat-value {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.agent-row__stat-label {
+  font-size: 11px;
   color: #6b7280;
 }
 
 .utilization-badge {
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   border-radius: 9999px;
   flex-shrink: 0;
+  min-width: 60px;
+  text-align: center;
 }
 
 .utilization-badge.utilization--low {
@@ -276,112 +361,30 @@
   color: #dc2626;
 }
 
-.agent-card__body {
-  padding: 16px;
-}
+/* Responsive for Agent List */
+@media (max-width: 768px) {
+  .agent-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
 
-.agent-card__progress {
-  margin-bottom: 16px;
-}
+  .agent-row__info {
+    min-width: 100%;
+  }
 
-.agent-card__progress-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  font-size: 13px;
-  color: #6b7280;
-}
+  .agent-row__progress {
+    flex: 1;
+    min-width: 120px;
+    max-width: none;
+  }
 
-.agent-card__progress-value {
-  font-weight: 600;
-  color: #1a1a2e;
-}
+  .agent-row__stats {
+    gap: 12px;
+  }
 
-.agent-card__progress-bar {
-  height: 8px;
-  background: #e5e7eb;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.agent-card__progress-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-.agent-card__progress-fill.utilization--low {
-  background: #10b981;
-}
-
-.agent-card__progress-fill.utilization--medium {
-  background: #f59e0b;
-}
-
-.agent-card__progress-fill.utilization--high {
-  background: #f97316;
-}
-
-.agent-card__progress-fill.utilization--critical {
-  background: #ef4444;
-}
-
-.agent-card__stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  text-align: center;
-}
-
-.agent-card__stat {
-  padding: 12px 8px;
-  background: #f9fafb;
-  border-radius: 8px;
-}
-
-.agent-card__stat-value {
-  display: block;
-  font-size: 18px;
-  font-weight: 600;
-  color: #1a1a2e;
-}
-
-.agent-card__stat-label {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.agent-card__footer {
-  padding: 12px 16px;
-  background: #f9fafb;
-  border-top: 1px solid #e5e7eb;
-}
-
-.btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 10px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-  background: white;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-secondary:hover {
-  background: #f9fafb;
-  border-color: #9ca3af;
-}
-
-.btn-sm {
-  padding: 8px 14px;
-  font-size: 13px;
+  .agent-row__stat {
+    min-width: 50px;
+  }
 }
 
 /* Alert */

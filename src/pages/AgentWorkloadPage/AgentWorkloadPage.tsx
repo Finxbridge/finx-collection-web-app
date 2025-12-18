@@ -34,8 +34,10 @@ export function AgentWorkloadPage() {
       setError('')
       const geographies = selectedGeography ? [selectedGeography] : undefined
       const data = await allocationService.getAgentWorkload(undefined, geographies)
+      console.log('Agent workload data:', data, 'Count:', data?.length)
       setAgents(data)
     } catch (err) {
+      console.error('Error fetching agents:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch agent workload')
     } finally {
       setIsLoading(false)
@@ -231,65 +233,53 @@ export function AgentWorkloadPage() {
           <p>No agents match your search criteria</p>
         </div>
       ) : (
-        <div className="agent-grid">
+        <div className="agent-list">
           {filteredAgents.map((agent) => (
-            <div key={agent.agentId} className="agent-card">
-              <div className="agent-card__header">
-                <div className="agent-card__avatar">
+            <div key={agent.agentId} className="agent-row">
+              <div className="agent-row__info">
+                <div className="agent-row__avatar">
                   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
                   </svg>
                 </div>
-                <div className="agent-card__info">
-                  <h3 className="agent-card__name">{agent.agentName}</h3>
-                  <span className="agent-card__geography">{agent.geography}</span>
-                </div>
-                <span className={`utilization-badge ${getUtilizationClass(agent.utilizationPercentage)}`}>
-                  {getUtilizationLabel(agent.utilizationPercentage)}
-                </span>
-              </div>
-
-              <div className="agent-card__body">
-                <div className="agent-card__progress">
-                  <div className="agent-card__progress-header">
-                    <span>Utilization</span>
-                    <span className="agent-card__progress-value">
-                      {agent.utilizationPercentage.toFixed(0)}%
-                    </span>
-                  </div>
-                  <div className="agent-card__progress-bar">
-                    <div
-                      className={`agent-card__progress-fill ${getUtilizationClass(agent.utilizationPercentage)}`}
-                      style={{ width: `${Math.min(agent.utilizationPercentage, 100)}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="agent-card__stats">
-                  <div className="agent-card__stat">
-                    <span className="agent-card__stat-value">{agent.activeAllocations}</span>
-                    <span className="agent-card__stat-label">Active</span>
-                  </div>
-                  <div className="agent-card__stat">
-                    <span className="agent-card__stat-value">{agent.capacity}</span>
-                    <span className="agent-card__stat-label">Capacity</span>
-                  </div>
-                  <div className="agent-card__stat">
-                    <span className="agent-card__stat-value">{agent.availableCapacity}</span>
-                    <span className="agent-card__stat-label">Available</span>
-                  </div>
+                <div className="agent-row__details">
+                  <h3 className="agent-row__name">{agent.agentName}</h3>
+                  <span className="agent-row__geography">{agent.geography}</span>
                 </div>
               </div>
 
-              <div className="agent-card__footer">
-                <button
-                  className="btn-secondary btn-sm"
-                  onClick={() => navigate(`/allocation/reallocation?fromAgent=${agent.agentId}`)}
-                >
-                  Reallocate Cases
-                </button>
+              <div className="agent-row__progress">
+                <div className="agent-row__progress-info">
+                  <span className="agent-row__progress-label">Utilization</span>
+                  <span className="agent-row__progress-value">{agent.utilizationPercentage.toFixed(0)}%</span>
+                </div>
+                <div className="agent-row__progress-bar">
+                  <div
+                    className={`agent-row__progress-fill ${getUtilizationClass(agent.utilizationPercentage)}`}
+                    style={{ width: `${Math.min(agent.utilizationPercentage, 100)}%` }}
+                  />
+                </div>
               </div>
+
+              <div className="agent-row__stats">
+                <div className="agent-row__stat">
+                  <span className="agent-row__stat-value">{agent.activeAllocations}</span>
+                  <span className="agent-row__stat-label">Active</span>
+                </div>
+                <div className="agent-row__stat">
+                  <span className="agent-row__stat-value">{agent.capacity}</span>
+                  <span className="agent-row__stat-label">Capacity</span>
+                </div>
+                <div className="agent-row__stat">
+                  <span className="agent-row__stat-value">{agent.availableCapacity}</span>
+                  <span className="agent-row__stat-label">Available</span>
+                </div>
+              </div>
+
+              <span className={`utilization-badge ${getUtilizationClass(agent.utilizationPercentage)}`}>
+                {getUtilizationLabel(agent.utilizationPercentage)}
+              </span>
             </div>
           ))}
         </div>
