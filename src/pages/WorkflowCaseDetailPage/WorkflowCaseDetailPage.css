@@ -58,7 +58,11 @@
   margin: 0;
 }
 
-/* Collect Payment Button */
+/* Collect Payment Dropdown */
+.collect-payment-dropdown {
+  position: relative;
+}
+
 .btn-collect-payment {
   display: inline-flex;
   align-items: center;
@@ -84,6 +88,107 @@
 .btn-collect-payment svg {
   width: 18px;
   height: 18px;
+}
+
+.dropdown-arrow {
+  width: 16px;
+  height: 16px;
+  margin-left: 4px;
+  transition: transform 0.2s;
+}
+
+.dropdown-arrow--open {
+  transform: rotate(180deg);
+}
+
+/* Payment Dropdown Menu */
+.payment-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  z-index: 100;
+  animation: dropdownFadeIn 0.2s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.payment-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-align: left;
+}
+
+.payment-dropdown-item:hover {
+  background: #f9fafb;
+}
+
+.payment-dropdown-item:first-child {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.payment-dropdown-item__icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.payment-dropdown-item__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.payment-dropdown-item__icon--digital {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #2563eb;
+}
+
+.payment-dropdown-item__icon--cash {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #059669;
+}
+
+.payment-dropdown-item__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.payment-dropdown-item__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.payment-dropdown-item__desc {
+  font-size: 12px;
+  color: #6b7280;
 }
 
 /* Summary Cards */
@@ -320,6 +425,49 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.cell-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-action svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-action--view {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.btn-action--view:hover {
+  background: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.btn-action--download {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.btn-action--download:hover {
+  background: #a7f3d0;
+  color: #047857;
 }
 
 /* Documents Grid */

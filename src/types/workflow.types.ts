@@ -217,6 +217,21 @@ export interface WorkflowEmailHistory {
   createdAt: string;
 }
 
+// WhatsApp history
+export interface WorkflowWhatsAppHistory {
+  id: number;
+  caseId: number;
+  phoneNumber?: string;
+  message?: string;
+  messageType?: string;
+  templateName?: string;
+  status?: string;
+  sentAt?: string;
+  deliveredAt?: string;
+  readAt?: string;
+  createdAt: string;
+}
+
 // Document
 export interface WorkflowDocument {
   id: number;
@@ -254,6 +269,7 @@ export interface CaseTabsDataDTO {
   notices: WorkflowNotice[];
   callLogs: WorkflowCallLog[];
   smsHistory: WorkflowSmsHistory[];
+  whatsappHistory: WorkflowWhatsAppHistory[];
   emailHistory: WorkflowEmailHistory[];
   documents: WorkflowDocument[];
   auditTrail: AuditLog[];
@@ -269,6 +285,7 @@ export interface WorkflowCaseDetail {
   notices: WorkflowNotice[];
   callLogs: WorkflowCallLog[];
   smsHistory: WorkflowSmsHistory[];
+  whatsappHistory: WorkflowWhatsAppHistory[];
   emailHistory: WorkflowEmailHistory[];
   documents: WorkflowDocument[];
   auditTrail: AuditLog[];
@@ -283,6 +300,7 @@ export type WorkflowTabType =
   | 'notices'
   | 'calls'
   | 'sms'
+  | 'whatsapp'
   | 'emails'
   | 'documents';
 

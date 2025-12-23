@@ -17,7 +17,7 @@ interface MenuItem {
 
 export function Sidebar() {
   const location = useLocation()
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(['access-management', 'case-sourcing', 'strategy-engine', 'allocation', 'repayment'])
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(['access-management', 'case-sourcing', 'strategy-engine', 'allocation', 'collections', 'collections-repayment', 'agency-management'])
 
   const toggleMenu = (menuId: string) => {
     setExpandedMenus((prev) =>
@@ -429,9 +429,9 @@ export function Sidebar() {
     ],
   }
 
-  // Repayment submenu
-  const repaymentMenu = {
-    id: 'repayment',
+  // Collections menu with OTS and Repayments sub-menus
+  const collectionsMenu = {
+    id: 'collections',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path
@@ -450,7 +450,32 @@ export function Sidebar() {
         />
       </svg>
     ),
-    label: 'Repayment',
+    label: 'Collections',
+  }
+
+  // OTS submenu (under Collections)
+  const otsMenu = {
+    id: 'collections-ots',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    label: 'OTS',
+  }
+
+  // Repayments submenu (under Collections)
+  const repaymentsSubMenu = {
+    id: 'collections-repayment',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="6" width="20" height="12" rx="2" stroke="currentColor" strokeWidth="2" />
+        <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+        <path d="M6 12H6.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M18 12H18.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    ),
+    label: 'Repayments',
     children: [
       {
         icon: (
@@ -464,11 +489,10 @@ export function Sidebar() {
       {
         icon: (
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
-            <path d="M21 21L16.65 16.65" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M12 8V12L15 15M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         ),
-        label: 'Search',
+        label: 'Repayment History',
         path: ROUTES.REPAYMENT_LIST,
       },
       {
@@ -483,16 +507,6 @@ export function Sidebar() {
       {
         icon: (
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16 4H18C18.5304 4 19.0391 4.21071 19.4142 4.58579C19.7893 4.96086 20 5.46957 20 6V20C20 20.5304 19.7893 21.0391 19.4142 21.4142C19.0391 21.7893 18.5304 22 18 22H6C5.46957 22 4.96086 21.7893 4.58579 21.4142C4.21071 21.0391 4 20.5304 4 20V6C4 5.46957 4.21071 4.96086 4.58579 4.58579C4.96086 4.21071 5.46957 4 6 4H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M15 2H9C8.44772 2 8 2.44772 8 3V5C8 5.55228 8.44772 6 9 6H15C15.5523 6 16 5.55228 16 5V3C16 2.44772 15.5523 2 15 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        ),
-        label: 'Reconciliation',
-        path: ROUTES.REPAYMENT_RECONCILIATION,
-      },
-      {
-        icon: (
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             <path d="M7 15H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             <path d="M14 15H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -502,6 +516,18 @@ export function Sidebar() {
         label: 'Digital Payment',
         path: ROUTES.REPAYMENT_DIGITAL_PAYMENT,
       },
+      {
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="6" width="20" height="12" rx="2" stroke="currentColor" strokeWidth="2" />
+            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+            <path d="M6 12H6.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <path d="M18 12H18.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        ),
+        label: 'Record Payment',
+        path: ROUTES.REPAYMENT_RECORD_PAYMENT,
+      },
     ],
   }
 
@@ -509,7 +535,10 @@ export function Sidebar() {
   const isCaseSourcingActive = location.pathname.startsWith('/case-sourcing')
   const isStrategyEngineActive = location.pathname.startsWith('/strategy-engine')
   const isAllocationActive = location.pathname.startsWith('/allocation')
+  const isCollectionsActive = location.pathname.startsWith('/repayment') || location.pathname.startsWith('/ots') // Collections includes repayment and OTS routes
   const isRepaymentActive = location.pathname.startsWith('/repayment')
+  const isOTSActive = location.pathname.startsWith('/ots')
+  const isAgencyManagementActive = location.pathname.startsWith('/agency-management')
 
   return (
     <aside className="sidebar">
@@ -775,19 +804,19 @@ export function Sidebar() {
           <span className="sidebar__nav-label">Template Management</span>
         </NavLink>
 
-        {/* Repayment submenu */}
+        {/* Collections submenu with OTS and Repayments */}
         <div className="sidebar__submenu">
           <button
             className={`sidebar__nav-item sidebar__nav-item--parent ${
-              isRepaymentActive ? 'sidebar__nav-item--active' : ''
+              isCollectionsActive ? 'sidebar__nav-item--active' : ''
             }`}
-            onClick={() => toggleMenu(repaymentMenu.id)}
+            onClick={() => toggleMenu(collectionsMenu.id)}
           >
-            <span className="sidebar__nav-icon">{repaymentMenu.icon}</span>
-            <span className="sidebar__nav-label">{repaymentMenu.label}</span>
+            <span className="sidebar__nav-icon">{collectionsMenu.icon}</span>
+            <span className="sidebar__nav-label">{collectionsMenu.label}</span>
             <svg
               className={`sidebar__nav-arrow ${
-                expandedMenus.includes(repaymentMenu.id) ? 'sidebar__nav-arrow--expanded' : ''
+                expandedMenus.includes(collectionsMenu.id) ? 'sidebar__nav-arrow--expanded' : ''
               }`}
               viewBox="0 0 24 24"
               fill="none"
@@ -802,25 +831,115 @@ export function Sidebar() {
               />
             </svg>
           </button>
-          {expandedMenus.includes(repaymentMenu.id) && (
+          {expandedMenus.includes(collectionsMenu.id) && (
             <div className="sidebar__submenu-items">
-              {repaymentMenu.children.map((child) => (
-                <NavLink
-                  key={child.path}
-                  to={child.path}
-                  className={({ isActive }) =>
-                    `sidebar__nav-item sidebar__nav-item--child ${
-                      isActive ? 'sidebar__nav-item--active' : ''
-                    }`
-                  }
+              {/* OTS sub-menu item */}
+              <NavLink
+                to={ROUTES.OTS}
+                className={({ isActive }) =>
+                  `sidebar__nav-item sidebar__nav-item--child ${
+                    isActive || isOTSActive ? 'sidebar__nav-item--active' : ''
+                  }`
+                }
+              >
+                <span className="sidebar__nav-icon">{otsMenu.icon}</span>
+                <span className="sidebar__nav-label">{otsMenu.label}</span>
+              </NavLink>
+
+              {/* Repayments sub-sub-menu */}
+              <div className="sidebar__nested-submenu">
+                <button
+                  className={`sidebar__nav-item sidebar__nav-item--child sidebar__nav-item--parent ${
+                    isRepaymentActive ? 'sidebar__nav-item--active' : ''
+                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleMenu(repaymentsSubMenu.id);
+                  }}
                 >
-                  <span className="sidebar__nav-icon">{child.icon}</span>
-                  <span className="sidebar__nav-label">{child.label}</span>
-                </NavLink>
-              ))}
+                  <span className="sidebar__nav-icon">{repaymentsSubMenu.icon}</span>
+                  <span className="sidebar__nav-label">{repaymentsSubMenu.label}</span>
+                  <svg
+                    className={`sidebar__nav-arrow ${
+                      expandedMenus.includes(repaymentsSubMenu.id) ? 'sidebar__nav-arrow--expanded' : ''
+                    }`}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M6 9L12 15L18 9"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+                {expandedMenus.includes(repaymentsSubMenu.id) && (
+                  <div className="sidebar__submenu-items sidebar__submenu-items--nested">
+                    {repaymentsSubMenu.children.map((child) => (
+                      <NavLink
+                        key={child.path}
+                        to={child.path}
+                        className={({ isActive }) =>
+                          `sidebar__nav-item sidebar__nav-item--grandchild ${
+                            isActive ? 'sidebar__nav-item--active' : ''
+                          }`
+                        }
+                      >
+                        <span className="sidebar__nav-icon">{child.icon}</span>
+                        <span className="sidebar__nav-label">{child.label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
+
+        {/* Agency Management */}
+        <NavLink
+          to={ROUTES.AGENCY_MANAGEMENT}
+          className={({ isActive }) =>
+            `sidebar__nav-item ${isActive || isAgencyManagementActive ? 'sidebar__nav-item--active' : ''}`
+          }
+        >
+          <span className="sidebar__nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M3 21H21"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M5 21V7L12 3L19 7V21"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M9 21V15H15V21"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M10 9H14"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          <span className="sidebar__nav-label">Agency Management</span>
+        </NavLink>
 
       </nav>
     </aside>

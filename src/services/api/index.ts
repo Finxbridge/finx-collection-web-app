@@ -22,6 +22,8 @@ import {
   digitalPaymentService as digitalPaymentServiceImport,
 } from './repayment.service'
 import { workflowService as workflowServiceImport } from './workflow.service'
+import { agencyService as agencyServiceImport } from './agency.service'
+import { otsService as otsServiceImport } from './ots.service'
 
 export { apiClient } from './axios.config'
 export { authService } from './auth.service'
@@ -41,6 +43,8 @@ export {
 } from './allocation.service'
 export { repaymentService, digitalPaymentService } from './repayment.service'
 export { workflowService } from './workflow.service'
+export { agencyService } from './agency.service'
+export { otsService } from './ots.service'
 
 // Export a combined API object for convenient access
 export const api = {
@@ -60,6 +64,8 @@ export const api = {
   repayment: repaymentServiceImport,
   digitalPayment: digitalPaymentServiceImport,
   workflow: workflowServiceImport,
+  agency: agencyServiceImport,
+  ots: otsServiceImport,
 }
 
 export default api

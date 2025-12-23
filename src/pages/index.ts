@@ -56,7 +56,15 @@ export { RepaymentDetailPage } from './RepaymentDetailPage/RepaymentDetailPage'
 export { RepaymentApprovalPage } from './RepaymentApprovalPage/RepaymentApprovalPage'
 export { ReconciliationPage } from './ReconciliationPage/ReconciliationPage'
 export { DigitalPaymentPage } from './DigitalPaymentPage/DigitalPaymentPage'
+export { RecordPaymentPage } from './RecordPaymentPage/RecordPaymentPage'
+export { ReceiptViewPage } from './ReceiptViewPage/ReceiptViewPage'
 
 // Workflow pages
 export { WorkflowPage } from './WorkflowPage/WorkflowPage'
 export { WorkflowCaseDetailPage } from './WorkflowCaseDetailPage/WorkflowCaseDetailPage'
+
+// Agency Management pages
+export { AgencyManagementPage } from './AgencyManagementPage/AgencyManagementPage'
+
+// OTS pages
+export { OTSPage } from './OTSPage/OTSPage'

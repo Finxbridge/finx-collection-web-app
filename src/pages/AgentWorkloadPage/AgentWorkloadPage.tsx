@@ -172,14 +172,15 @@ export function AgentWorkloadPage() {
 
       {/* Filters */}
       <div className="workload-filters">
-        <div className="search-box">
-          <svg className="search-box__icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <div className="search-input-wrapper">
+          <svg className="search-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+            <path d="M21 21L16.65 16.65" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <input
             type="text"
-            className="search-box__input"
-            placeholder="Search agents..."
+            className="search-input"
+            placeholder="Search by agent name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />

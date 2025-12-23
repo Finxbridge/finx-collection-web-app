@@ -130,6 +130,36 @@
   height: 16px;
 }
 
+/* Nested submenu for sub-sub-menus */
+.sidebar__nested-submenu {
+  margin: 0;
+}
+
+.sidebar__submenu-items--nested {
+  padding-left: 0.5rem;
+  margin-top: 0.25rem;
+  border-left: 2px solid rgba(255, 255, 255, 0.08);
+  margin-left: 1rem;
+}
+
+.sidebar__nav-item--grandchild {
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  margin: 0.125rem 0.5rem;
+}
+
+.sidebar__nav-item--grandchild .sidebar__nav-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Disabled menu item */
+.sidebar__nav-item--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* Footer */
 .sidebar__footer {
   padding: 1.25rem;

@@ -55,9 +55,15 @@ export const ROUTES = {
   REPAYMENT_APPROVALS: '/repayment/approvals',
   REPAYMENT_RECONCILIATION: '/repayment/reconciliation',
   REPAYMENT_DIGITAL_PAYMENT: '/repayment/digital-payment',
+  REPAYMENT_RECORD_PAYMENT: '/repayment/record-payment',
+  REPAYMENT_RECEIPT: '/repayment/receipt/:repaymentId',
   // Workflow Routes
   WORKFLOW: '/workflow',
   WORKFLOW_CASE_DETAIL: '/workflow/case/:caseId',
+  // Agency Management Routes
+  AGENCY_MANAGEMENT: '/agency-management',
+  // OTS Routes
+  OTS: '/ots',
   NOT_FOUND: '*',
 } as const
 

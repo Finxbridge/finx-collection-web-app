@@ -3,9 +3,10 @@
  * Case detail page with tabs for loan details, customer info, repayments, etc.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { workflowService } from '@services/api/workflow.service';
+import { repaymentService } from '@services/api/repayment.service';
 import type {
   WorkflowCaseDetail,
   WorkflowLoanDetails,
@@ -15,12 +16,13 @@ import type {
   WorkflowNotice,
   WorkflowCallLog,
   WorkflowSmsHistory,
+  WorkflowWhatsAppHistory,
   WorkflowEmailHistory,
   WorkflowDocument,
   WorkflowTabType,
   CaseSummaryDTO,
 } from '@types';
-import { WorkflowCaseStatusLabels, getDpdBadgeColor } from '@types';
+import { getDpdBadgeColor } from '@types';
 import { ROUTES } from '@config/constants';
 import './WorkflowCaseDetailPage.css';
 
@@ -32,6 +34,20 @@ export function WorkflowCaseDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<CaseSummaryDTO | null>(null);
   const [caseDetail, setCaseDetail] = useState<WorkflowCaseDetail | null>(null);
+  const [showPaymentDropdown, setShowPaymentDropdown] = useState(false);
+  const paymentDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (paymentDropdownRef.current && !paymentDropdownRef.current.contains(event.target as Node)) {
+        setShowPaymentDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (caseId) {
@@ -60,14 +76,22 @@ export function WorkflowCaseDetailPage() {
     navigate(ROUTES.WORKFLOW);
   };
 
-  const handleCollectPayment = () => {
-    // Navigate to Digital Payment page with case details pre-filled
+  const getPaymentParams = () => {
     const params = new URLSearchParams();
     if (caseId) params.set('caseId', caseId);
     if (summary?.loanAccountNumber) params.set('loanAccountNumber', summary.loanAccountNumber);
     if (summary?.customerName) params.set('customerName', summary.customerName);
+    return params.toString();
+  };
 
-    navigate(`${ROUTES.REPAYMENT_DIGITAL_PAYMENT}?${params.toString()}`);
+  const handleDigitalPayment = () => {
+    setShowPaymentDropdown(false);
+    navigate(`${ROUTES.REPAYMENT_DIGITAL_PAYMENT}?${getPaymentParams()}`);
+  };
+
+  const handleRecordPayment = () => {
+    setShowPaymentDropdown(false);
+    navigate(`${ROUTES.REPAYMENT_RECORD_PAYMENT}?${getPaymentParams()}`);
   };
 
   const formatCurrency = (amount: number | undefined): string => {
@@ -188,6 +212,16 @@ export function WorkflowCaseDetailPage() {
       icon: (
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+    {
+      id: 'whatsapp',
+      label: 'WhatsApp',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       ),
     },
@@ -489,6 +523,27 @@ export function WorkflowCaseDetailPage() {
     </div>
   );
 
+  const handleViewReceipt = (repaymentId: number) => {
+    navigate(`/repayment/receipt/${repaymentId}`);
+  };
+
+  const handleDownloadReceipt = async (repaymentId: number) => {
+    try {
+      const blob = await repaymentService.downloadReceipt(repaymentId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `receipt-${repaymentId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading receipt:', err);
+      alert('Failed to download receipt. Please try again.');
+    }
+  };
+
   const renderRepayments = (repayments: WorkflowRepayment[]) => (
     <div className="tab-content">
       {repayments.length === 0 ? (
@@ -509,7 +564,6 @@ export function WorkflowCaseDetailPage() {
               <th>Mode</th>
               <th>Date</th>
               <th>Status</th>
-              <th>Reference</th>
               <th>Receipt</th>
             </tr>
           </thead>
@@ -525,8 +579,29 @@ export function WorkflowCaseDetailPage() {
                     {r.status}
                   </span>
                 </td>
-                <td className="cell-mono">{r.referenceNumber || '-'}</td>
-                <td className="cell-mono">{r.receiptNumber || '-'}</td>
+                <td className="cell-actions">
+                  <button
+                    className="btn-action btn-action--view"
+                    onClick={() => handleViewReceipt(r.id)}
+                    title="View Receipt"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+                    </svg>
+                  </button>
+                  <button
+                    className="btn-action btn-action--download"
+                    onClick={() => handleDownloadReceipt(r.id)}
+                    title="Download Receipt"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <polyline points="7 10 12 15 17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -709,6 +784,52 @@ export function WorkflowCaseDetailPage() {
     </div>
   );
 
+  const renderWhatsAppHistory = (whatsappHistory: WorkflowWhatsAppHistory[]) => (
+    <div className="tab-content">
+      {whatsappHistory.length === 0 ? (
+        <div className="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <p>No WhatsApp history found</p>
+          <span>No WhatsApp messages have been sent for this case</span>
+        </div>
+      ) : (
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Phone Number</th>
+              <th>Message</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Sent At</th>
+              <th>Delivered At</th>
+              <th>Read At</th>
+            </tr>
+          </thead>
+          <tbody>
+            {whatsappHistory.map((wa) => (
+              <tr key={wa.id}>
+                <td className="cell-mono">{wa.phoneNumber || '-'}</td>
+                <td className="cell-message">{wa.message || wa.templateName || '-'}</td>
+                <td>{wa.messageType || '-'}</td>
+                <td>
+                  <span className={`badge ${wa.status === 'READ' ? 'badge--success' : wa.status === 'DELIVERED' ? 'badge--info' : wa.status === 'SENT' ? 'badge--warning' : 'badge--default'}`}>
+                    {wa.status || '-'}
+                  </span>
+                </td>
+                <td>{formatDateTime(wa.sentAt)}</td>
+                <td>{formatDateTime(wa.deliveredAt)}</td>
+                <td>{formatDateTime(wa.readAt)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+
   const renderEmailHistory = (emails: WorkflowEmailHistory[]) => (
     <div className="tab-content">
       {emails.length === 0 ? (
@@ -812,6 +933,8 @@ export function WorkflowCaseDetailPage() {
         return renderCallLogs(caseDetail.callLogs || []);
       case 'sms':
         return renderSmsHistory(caseDetail.smsHistory || []);
+      case 'whatsapp':
+        return renderWhatsAppHistory(caseDetail.whatsappHistory || []);
       case 'emails':
         return renderEmailHistory(caseDetail.emailHistory || []);
       case 'documents':
@@ -864,45 +987,81 @@ export function WorkflowCaseDetailPage() {
             {summary?.customerName} • {summary?.loanAccountNumber}
           </p>
         </div>
-        <button className="btn-collect-payment" onClick={handleCollectPayment}>
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
-            <path d="M2 10H22" stroke="currentColor" strokeWidth="2" />
-            <path d="M6 16H10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          Collect Payment
-        </button>
+        <div className="collect-payment-dropdown" ref={paymentDropdownRef}>
+          <button
+            className="btn-collect-payment"
+            onClick={() => setShowPaymentDropdown(!showPaymentDropdown)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
+              <path d="M2 10H22" stroke="currentColor" strokeWidth="2" />
+              <path d="M6 16H10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            Collect Payment
+            <svg className={`dropdown-arrow ${showPaymentDropdown ? 'dropdown-arrow--open' : ''}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          {showPaymentDropdown && (
+            <div className="payment-dropdown-menu">
+              <button className="payment-dropdown-item" onClick={handleDigitalPayment}>
+                <div className="payment-dropdown-item__icon payment-dropdown-item__icon--digital">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
+                    <path d="M7 15H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M14 15H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M2 10H22" stroke="currentColor" strokeWidth="2" />
+                  </svg>
+                </div>
+                <div className="payment-dropdown-item__content">
+                  <span className="payment-dropdown-item__title">Digital Payment</span>
+                  <span className="payment-dropdown-item__desc">UPI, QR Code, Payment Link</span>
+                </div>
+              </button>
+              <button className="payment-dropdown-item" onClick={handleRecordPayment}>
+                <div className="payment-dropdown-item__icon payment-dropdown-item__icon--cash">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="6" width="20" height="12" rx="2" stroke="currentColor" strokeWidth="2" />
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+                    <path d="M6 12H6.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M18 12H18.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <div className="payment-dropdown-item__content">
+                  <span className="payment-dropdown-item__title">Record Payment</span>
+                  <span className="payment-dropdown-item__desc">Cash or Cheque</span>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Summary Cards */}
-      {summary && (
+      {(summary || caseDetail) && (
         <div className="summary-cards">
           <div className="summary-card">
-            <span className="summary-card__label">Lender</span>
-            <span className="summary-card__value">{summary.lender}</span>
-          </div>
-          <div className="summary-card">
             <span className="summary-card__label">DPD</span>
-            <span className={`badge badge--large ${getDpdBadgeClass(summary.dpd)}`}>
-              {summary.dpd} days
+            <span className={`badge badge--large ${getDpdBadgeClass(caseDetail?.loanDetails?.dpd || summary?.dpd || 0)}`}>
+              {caseDetail?.loanDetails?.dpd || summary?.dpd || 0} days
             </span>
           </div>
           <div className="summary-card">
             <span className="summary-card__label">Total Outstanding</span>
             <span className="summary-card__value summary-card__value--amount">
-              {formatCurrency(summary.totalOutstanding)}
+              {formatCurrency(caseDetail?.loanDetails?.totalOutstanding || summary?.totalOutstanding)}
             </span>
           </div>
           <div className="summary-card">
             <span className="summary-card__label">Overdue Amount</span>
             <span className="summary-card__value summary-card__value--overdue">
-              {formatCurrency(summary.overdueAmount)}
-            </span>
-          </div>
-          <div className="summary-card">
-            <span className="summary-card__label">Status</span>
-            <span className={`badge badge--large ${summary.caseStatus === 'ALLOCATED' ? 'badge--info' : summary.caseStatus === 'PTP' ? 'badge--primary' : 'badge--default'}`}>
-              {WorkflowCaseStatusLabels[summary.caseStatus] || summary.caseStatus}
+              {formatCurrency(
+                (caseDetail?.loanDetails?.principalOverdue || 0) +
+                (caseDetail?.loanDetails?.interestOverdue || 0) +
+                (caseDetail?.loanDetails?.feesOverdue || 0) +
+                (caseDetail?.loanDetails?.penaltyOverdue || 0) ||
+                summary?.overdueAmount
+              )}
             </span>
           </div>
         </div>

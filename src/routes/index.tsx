@@ -44,8 +44,12 @@ import {
   RepaymentApprovalPage,
   ReconciliationPage,
   DigitalPaymentPage,
+  RecordPaymentPage,
+  ReceiptViewPage,
   WorkflowPage,
   WorkflowCaseDetailPage,
+  AgencyManagementPage,
+  OTSPage,
 } from '@pages'
 import { ProtectedRoute } from './ProtectedRoute'
 import { ROUTES } from '@config/constants'
@@ -117,10 +121,18 @@ export function AppRoutes() {
         <Route path={ROUTES.REPAYMENT_APPROVALS} element={<RepaymentApprovalPage />} />
         <Route path={ROUTES.REPAYMENT_RECONCILIATION} element={<ReconciliationPage />} />
         <Route path={ROUTES.REPAYMENT_DIGITAL_PAYMENT} element={<DigitalPaymentPage />} />
+        <Route path={ROUTES.REPAYMENT_RECORD_PAYMENT} element={<RecordPaymentPage />} />
+        <Route path={ROUTES.REPAYMENT_RECEIPT} element={<ReceiptViewPage />} />
 
         {/* Workflow routes */}
         <Route path={ROUTES.WORKFLOW} element={<WorkflowPage />} />
         <Route path={ROUTES.WORKFLOW_CASE_DETAIL} element={<WorkflowCaseDetailPage />} />
+
+        {/* Agency Management routes */}
+        <Route path={ROUTES.AGENCY_MANAGEMENT} element={<AgencyManagementPage />} />
+
+        {/* OTS routes */}
+        <Route path={ROUTES.OTS} element={<OTSPage />} />
       </Route>
 
       {/* 404 Not Found */}
