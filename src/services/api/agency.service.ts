@@ -304,17 +304,14 @@ export const agencyService = {
   /**
    * Allocate cases to agency (first level)
    */
-  async allocateCasesToAgency(
-    data: AgencyCaseAllocationRequest
-  ): Promise<AgencyCaseAllocation[]> {
-    const response = await apiClient.post<ApiResponse<AgencyCaseAllocation[]>>(
+  async allocateCasesToAgency(data: AgencyCaseAllocationRequest): Promise<void> {
+    const response = await apiClient.post<ApiResponse<null>>(
       `${BASE_URL}/allocate-cases`,
       data
     )
-    if (isSuccessResponse(response.data) && response.data.payload) {
-      return response.data.payload
+    if (!isSuccessResponse(response.data)) {
+      throw new Error(response.data.message || 'Failed to allocate cases')
     }
-    throw new Error(response.data.message || 'Failed to allocate cases')
   },
 
   /**
@@ -323,19 +320,19 @@ export const agencyService = {
   async assignCasesToAgent(
     agencyId: number,
     data: AgentCaseAssignmentRequest
-  ): Promise<AgencyCaseAllocation[]> {
-    const response = await apiClient.post<ApiResponse<AgencyCaseAllocation[]>>(
+  ): Promise<void> {
+    const response = await apiClient.post<ApiResponse<null>>(
       `${BASE_URL}/${agencyId}/assign-to-agent`,
       data
     )
-    if (isSuccessResponse(response.data) && response.data.payload) {
-      return response.data.payload
+    if (!isSuccessResponse(response.data)) {
+      throw new Error(response.data.message || 'Failed to assign cases to agent')
     }
-    throw new Error(response.data.message || 'Failed to assign cases to agent')
   },
 
   /**
    * Deallocate cases from agency
+   * Note: API expects array of caseIds as request body, reason as query param
    */
   async deallocateCasesFromAgency(
     agencyId: number,
@@ -344,7 +341,8 @@ export const agencyService = {
   ): Promise<void> {
     const response = await apiClient.post<ApiResponse<null>>(
       `${BASE_URL}/${agencyId}/deallocate-cases`,
-      { caseIds, reason }
+      caseIds,
+      { params: { reason } }
     )
     if (!isSuccessResponse(response.data)) {
       throw new Error(response.data.message || 'Failed to deallocate cases')
@@ -399,6 +397,36 @@ export const agencyService = {
       return response.data.payload
     }
     throw new Error(response.data.message || 'Failed to fetch unassigned cases')
+  },
+
+  /**
+   * Get cases not allocated to any agency
+   * Returns cases from allocation-service that are NOT yet allocated to ANY agency
+   */
+  async getCasesNotAllocatedToAgency(page = 0, size = 20): Promise<PageResponse<AgencyCaseAllocation>> {
+    const response = await apiClient.get<ApiResponse<PageResponse<AgencyCaseAllocation>>>(
+      `${BASE_URL}/cases/unallocated-to-agency`,
+      { params: { page, size } }
+    )
+    if (isSuccessResponse(response.data) && response.data.payload) {
+      return response.data.payload
+    }
+    throw new Error(response.data.message || 'Failed to fetch unallocated cases')
+  },
+
+  /**
+   * Get all allocated cases with status
+   * Returns all cases with their allocation/assignment status
+   */
+  async getAllAllocatedCasesWithStatus(page = 0, size = 20): Promise<PageResponse<AgencyCaseAllocation>> {
+    const response = await apiClient.get<ApiResponse<PageResponse<AgencyCaseAllocation>>>(
+      `${BASE_URL}/cases/all-with-status`,
+      { params: { page, size } }
+    )
+    if (isSuccessResponse(response.data) && response.data.payload) {
+      return response.data.payload
+    }
+    throw new Error(response.data.message || 'Failed to fetch allocated cases with status')
   },
 
   // ============ Dashboard ============

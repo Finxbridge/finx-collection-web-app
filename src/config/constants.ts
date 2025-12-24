@@ -109,6 +109,7 @@ export const API_ENDPOINTS = {
       UPDATE: (id: number) => `/access/management/users/${id}`,
       DELETE: (id: number) => `/access/management/users/${id}`,
       PERMISSIONS: (userId: number) => `/access/management/users/${userId}/permissions`,
+      APPROVED_AGENCIES: '/access/management/users/agencies/approved',
     },
   },
   // Legacy endpoints for backwards compatibility

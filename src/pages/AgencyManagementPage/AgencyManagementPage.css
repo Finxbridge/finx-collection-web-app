@@ -1076,3 +1076,254 @@ body.modal-open {
     justify-content: center;
   }
 }
+
+/* ============ Agency Performance Dashboard ============ */
+.performance-agency-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.performance-agency-selector .form-label {
+  margin: 0;
+  white-space: nowrap;
+  font-weight: 500;
+  color: #374151;
+}
+
+.performance-agency-selector .form-select {
+  min-width: 300px;
+}
+
+.performance-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Metrics Grid */
+.performance-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.metric-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.metric-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.metric-card__icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.metric-card__icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.metric-card--primary .metric-card__icon {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.metric-card--info .metric-card__icon {
+  background: #f0f9ff;
+  color: #0284c7;
+}
+
+.metric-card--success .metric-card__icon {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.metric-card--warning .metric-card__icon {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.metric-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metric-card__value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1;
+}
+
+.metric-card__label {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* Performance Sections */
+.performance-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+/* Financial Metrics Grid */
+.financial-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.financial-card {
+  padding: 24px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.financial-card__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.financial-card__header svg {
+  width: 20px;
+  height: 20px;
+}
+
+.financial-card__value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.financial-card__value--success {
+  color: #16a34a;
+}
+
+/* PTP Metrics Grid */
+.ptp-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.ptp-card {
+  padding: 24px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.ptp-card__header {
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.ptp-card__value {
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.ptp-card--success .ptp-card__value {
+  color: #16a34a;
+}
+
+.ptp-card--danger .ptp-card__value {
+  color: #dc2626;
+}
+
+.ptp-card__bar {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ptp-card__bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.ptp-card__bar-fill--success {
+  background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+}
+
+.ptp-card__bar-fill--danger {
+  background: linear-gradient(90deg, #f87171 0%, #dc2626 100%);
+}
+
+/* Responsive Design for Performance Dashboard */
+@media (max-width: 1200px) {
+  .performance-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .performance-agency-selector {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .performance-agency-selector .form-select {
+    min-width: 100%;
+  }
+
+  .performance-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .financial-metrics-grid,
+  .ptp-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-card__value {
+    font-size: 24px;
+  }
+
+  .financial-card__value {
+    font-size: 24px;
+  }
+
+  .ptp-card__value {
+    font-size: 28px;
+  }
+}

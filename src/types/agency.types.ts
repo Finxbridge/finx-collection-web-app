@@ -17,6 +17,8 @@ export type AgencyType = 'INTERNAL' | 'EXTERNAL' | 'LEGAL' | 'FIELD'
 
 export type AllocationStatus = 'ALLOCATED' | 'ASSIGNED' | 'DEALLOCATED'
 
+export type AssignmentStatus = 'UNALLOCATED' | 'ALLOCATED_TO_AGENCY' | 'ASSIGNED_TO_AGENT'
+
 // ============ KYC Document ============
 export interface KycDocument {
   documentType: string
@@ -110,14 +112,28 @@ export interface Agent {
   status: string
 }
 
+// ============ Case Assignment Info ============
+export interface CaseAssignmentInfo {
+  agencyId: number
+  agencyName: string
+  agencyCode: string
+  agentId?: number
+  agentName?: string
+  assignedAt: string
+}
+
 // ============ Case Allocation ============
 export interface AgencyCaseAllocation {
   id: number
   agencyId: number
+  agencyName?: string
+  agencyCode?: string
   caseId: number
   externalCaseId?: string
   agentId?: number
+  agentName?: string
   allocationStatus: AllocationStatus
+  assignmentStatus: AssignmentStatus
   batchId?: string
   notes?: string
   allocatedAt: string
@@ -125,12 +141,15 @@ export interface AgencyCaseAllocation {
   deallocatedAt?: string
   deallocatedBy?: number
   deallocatedReason?: string
+  assignments?: CaseAssignmentInfo[]
+  assignmentCount?: number
 }
 
 // ============ Case Allocation Request ============
 export interface AgencyCaseAllocationRequest {
   agencyId: number
   caseIds: number[]
+  agencyUserId?: number
   notes?: string
 }
 
@@ -193,4 +212,16 @@ export const AllocationStatusLabels: Record<AllocationStatus, string> = {
   ALLOCATED: 'Allocated',
   ASSIGNED: 'Assigned',
   DEALLOCATED: 'Deallocated',
+}
+
+export const AssignmentStatusLabels: Record<AssignmentStatus, string> = {
+  UNALLOCATED: 'Unallocated',
+  ALLOCATED_TO_AGENCY: 'Allocated to Agency',
+  ASSIGNED_TO_AGENT: 'Assigned to Agent',
+}
+
+export const AssignmentStatusColors: Record<AssignmentStatus, string> = {
+  UNALLOCATED: 'default',
+  ALLOCATED_TO_AGENCY: 'warning',
+  ASSIGNED_TO_AGENT: 'success',
 }

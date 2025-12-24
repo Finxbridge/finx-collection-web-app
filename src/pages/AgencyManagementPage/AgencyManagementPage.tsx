@@ -12,16 +12,20 @@ import type {
   AgencyCaseAllocation,
   AgencyStatus,
   AgencyType,
+  AssignmentStatus,
+  AgencyDashboard,
   PageResponse,
 } from '@types';
 import {
   AgencyStatusLabels,
   AgencyStatusColors,
   AgencyTypeLabels,
+  AssignmentStatusLabels,
+  AssignmentStatusColors,
 } from '@types';
 import './AgencyManagementPage.css';
 
-type TabType = 'agencies' | 'pending-approval' | 'agency-cases' | 'case-assignment';
+type TabType = 'agencies' | 'pending-approval' | 'agency-cases' | 'case-assignment' | 'agency-performance';
 
 // Form Modal Component
 interface AgencyFormModalProps {
@@ -682,13 +686,18 @@ interface CaseAssignmentModalProps {
   onClose: () => void;
   selectedCases: AgencyCaseAllocation[];
   agents: Agent[];
-  onAssign: (agentId: number, notes?: string) => Promise<void>;
+  agencies: Agency[];
+  onAssign: (agentId: number, agencyId: number, notes?: string) => Promise<void>;
   loading: boolean;
 }
 
-function CaseAssignmentModal({ isOpen, onClose, selectedCases, agents, onAssign, loading }: CaseAssignmentModalProps) {
+function CaseAssignmentModal({ isOpen, onClose, selectedCases, agents, agencies, onAssign, loading }: CaseAssignmentModalProps) {
   const [selectedAgent, setSelectedAgent] = useState<number | null>(null);
+  const [selectedAgency, setSelectedAgency] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
+
+  // Get active agencies for dropdown
+  const activeAgencies = agencies.filter(a => a.status === 'ACTIVE');
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -705,12 +714,17 @@ function CaseAssignmentModal({ isOpen, onClose, selectedCases, agents, onAssign,
   if (!isOpen) return null;
 
   const handleAssign = async () => {
+    if (!selectedAgency) {
+      alert('Please select an agency');
+      return;
+    }
     if (!selectedAgent) {
       alert('Please select an agent');
       return;
     }
-    await onAssign(selectedAgent, notes);
+    await onAssign(selectedAgent, selectedAgency, notes);
     setSelectedAgent(null);
+    setSelectedAgency(null);
     setNotes('');
   };
 
@@ -729,6 +743,21 @@ function CaseAssignmentModal({ isOpen, onClose, selectedCases, agents, onAssign,
           <p className="assignment-info">
             Assigning <strong>{selectedCases.length}</strong> case(s) to an agent
           </p>
+          <div className="form-group">
+            <label className="form-label">Select Agency *</label>
+            <select
+              className="form-select"
+              value={selectedAgency || ''}
+              onChange={(e) => setSelectedAgency(parseInt(e.target.value) || null)}
+            >
+              <option value="">-- Select Agency --</option>
+              {activeAgencies.map((agency) => (
+                <option key={agency.id} value={agency.id}>
+                  {agency.agencyName} ({agency.agencyCode})
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="form-group">
             <label className="form-label">Select Agent *</label>
             <select
@@ -759,7 +788,7 @@ function CaseAssignmentModal({ isOpen, onClose, selectedCases, agents, onAssign,
           <button className="btn btn--secondary" onClick={onClose} disabled={loading}>
             Cancel
           </button>
-          <button className="btn btn--primary" onClick={handleAssign} disabled={loading || !selectedAgent}>
+          <button className="btn btn--primary" onClick={handleAssign} disabled={loading || !selectedAgency || !selectedAgent}>
             {loading ? 'Assigning...' : 'Assign Cases'}
           </button>
         </div>
@@ -1086,8 +1115,10 @@ export function AgencyManagementPage() {
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [pendingAgencies, setPendingAgencies] = useState<Agency[]>([]);
   const [caseAllocations, setCaseAllocations] = useState<AgencyCaseAllocation[]>([]);
-  const [unassignedCases, setUnassignedCases] = useState<AgencyCaseAllocation[]>([]);
+  const [allCasesWithStatus, setAllCasesWithStatus] = useState<AgencyCaseAllocation[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [agencyDashboard, setAgencyDashboard] = useState<AgencyDashboard | null>(null);
+  const [performanceAgencyId, setPerformanceAgencyId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1172,16 +1203,16 @@ export function AgencyManagementPage() {
     }
   }, [selectedAgencyId, page]);
 
-  // Fetch Unassigned Cases
-  const fetchUnassignedCases = useCallback(async () => {
+  // Fetch All Cases with Status
+  const fetchAllCasesWithStatus = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await agencyService.getAllUnassignedCases(page, 20);
-      setUnassignedCases(response.content);
+      const response = await agencyService.getAllAllocatedCasesWithStatus(page, 20);
+      setAllCasesWithStatus(response.content);
       setTotalPages(response.totalPages);
       setTotalElements(response.totalElements);
     } catch (err) {
-      console.error('Error fetching unassigned cases:', err);
+      console.error('Error fetching cases with status:', err);
     } finally {
       setLoading(false);
     }
@@ -1194,6 +1225,20 @@ export function AgencyManagementPage() {
       setAgents(agentList);
     } catch (err) {
       console.error('Error fetching agents:', err);
+    }
+  }, []);
+
+  // Fetch Agency Dashboard
+  const fetchAgencyDashboard = useCallback(async (agencyId: number) => {
+    try {
+      setLoading(true);
+      const dashboard = await agencyService.getAgencyDashboard(agencyId);
+      setAgencyDashboard(dashboard);
+    } catch (err) {
+      console.error('Error fetching agency dashboard:', err);
+      setAgencyDashboard(null);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -1221,13 +1266,20 @@ export function AgencyManagementPage() {
           }
           break;
         case 'case-assignment':
-          await fetchUnassignedCases();
+          await fetchAllCasesWithStatus();
           await fetchAgents();
+          break;
+        case 'agency-performance':
+          // Fetch agencies list for dropdown, dashboard will be fetched when agency is selected
+          await fetchAgencies();
+          if (performanceAgencyId) {
+            await fetchAgencyDashboard(performanceAgencyId);
+          }
           break;
       }
     };
     fetchData();
-  }, [activeTab, page, selectedAgencyId, fetchAgencies, fetchPendingAgencies, fetchAgencyCases, fetchUnassignedCases, fetchAgents]);
+  }, [activeTab, page, selectedAgencyId, performanceAgencyId, fetchAgencies, fetchPendingAgencies, fetchAgencyCases, fetchAllCasesWithStatus, fetchAgents, fetchAgencyDashboard]);
 
   // Handlers
   const handleCreateAgency = async (data: CreateAgencyRequest) => {
@@ -1322,10 +1374,9 @@ export function AgencyManagementPage() {
     }
   };
 
-  const handleAssignCases = async (agentId: number, notes?: string) => {
+  const handleAssignCases = async (agentId: number, agencyId: number, notes?: string) => {
     if (selectedCases.length === 0) return;
 
-    const agencyId = selectedCases[0].agencyId;
     const caseIds = selectedCases.map((c) => c.caseId);
 
     try {
@@ -1337,7 +1388,7 @@ export function AgencyManagementPage() {
       });
       setShowAssignmentModal(false);
       setSelectedCases([]);
-      fetchUnassignedCases();
+      fetchAllCasesWithStatus();
     } catch (err) {
       console.error('Error assigning cases:', err);
       alert(err instanceof Error ? err.message : 'Failed to assign cases');
@@ -1348,19 +1399,21 @@ export function AgencyManagementPage() {
 
   const toggleCaseSelection = (allocation: AgencyCaseAllocation) => {
     setSelectedCases((prev) => {
-      const exists = prev.find((c) => c.id === allocation.id);
+      const exists = prev.find((c) => c.caseId === allocation.caseId);
       if (exists) {
-        return prev.filter((c) => c.id !== allocation.id);
+        return prev.filter((c) => c.caseId !== allocation.caseId);
       }
       return [...prev, allocation];
     });
   };
 
   const selectAllCases = () => {
-    if (selectedCases.length === unassignedCases.length) {
+    // Only select cases that are NOT yet assigned to an agent
+    const assignableCases = allCasesWithStatus.filter(c => c.assignmentStatus !== 'ASSIGNED_TO_AGENT');
+    if (selectedCases.length === assignableCases.length) {
       setSelectedCases([]);
     } else {
-      setSelectedCases([...unassignedCases]);
+      setSelectedCases([...assignableCases]);
     }
   };
 
@@ -1375,6 +1428,11 @@ export function AgencyManagementPage() {
 
   const getStatusBadgeClass = (status: AgencyStatus): string => {
     const color = AgencyStatusColors[status] || 'default';
+    return `badge--${color}`;
+  };
+
+  const getAssignmentStatusBadgeClass = (status: AssignmentStatus): string => {
+    const color = AssignmentStatusColors[status] || 'default';
     return `badge--${color}`;
   };
 
@@ -1781,108 +1839,325 @@ export function AgencyManagementPage() {
     </>
   );
 
-  const renderCaseAssignmentTab = () => (
-    <>
-      <div className="tab-toolbar">
-        <div className="selection-info">
-          {selectedCases.length > 0 && (
-            <span>{selectedCases.length} case(s) selected</span>
-          )}
-        </div>
-        <button
-          className="btn btn--primary"
-          disabled={selectedCases.length === 0}
-          onClick={() => setShowAssignmentModal(true)}
-        >
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <circle cx="8.5" cy="7" r="4" stroke="currentColor" strokeWidth="2" />
-            <path d="M20 8V14M17 11H23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Assign to Agent
-        </button>
-      </div>
+  const renderCaseAssignmentTab = () => {
+    // Cases that are NOT yet assigned to an agent can be selected
+    const assignableCasesCount = allCasesWithStatus.filter(c => c.assignmentStatus !== 'ASSIGNED_TO_AGENT').length;
 
-      {loading ? (
-        <div className="loading-container">
-          <div className="spinner"></div>
-          <p>Loading unassigned cases...</p>
+    return (
+      <>
+        <div className="tab-toolbar">
+          <div className="selection-info">
+            {selectedCases.length > 0 && (
+              <span>{selectedCases.length} case(s) selected</span>
+            )}
+          </div>
+          <button
+            className="btn btn--primary"
+            disabled={selectedCases.length === 0}
+            onClick={() => setShowAssignmentModal(true)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 21H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M5 21V7L12 3L19 7V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M9 21V15H15V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M9 9H9.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path d="M15 9H15.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            Assign to Agency
+          </button>
         </div>
-      ) : unassignedCases.length === 0 ? (
-        <div className="empty-state">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 12L11 14L15 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-          </svg>
-          <p>No unassigned cases</p>
-          <span>All cases have been assigned to agents</span>
-        </div>
-      ) : (
-        <>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>
-                  <input
-                    type="checkbox"
-                    checked={selectedCases.length === unassignedCases.length}
-                    onChange={selectAllCases}
-                  />
-                </th>
-                <th>Case ID</th>
-                <th>External Case ID</th>
-                <th>Agency ID</th>
-                <th>Status</th>
-                <th>Allocated On</th>
-              </tr>
-            </thead>
-            <tbody>
-              {unassignedCases.map((allocation) => (
-                <tr key={allocation.id}>
-                  <td>
+
+        {loading ? (
+          <div className="loading-container">
+            <div className="spinner"></div>
+            <p>Loading cases...</p>
+          </div>
+        ) : allCasesWithStatus.length === 0 ? (
+          <div className="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 12L11 14L15 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+            </svg>
+            <p>No cases found</p>
+            <span>No cases have been allocated yet</span>
+          </div>
+        ) : (
+          <>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>
                     <input
                       type="checkbox"
-                      checked={selectedCases.some((c) => c.id === allocation.id)}
-                      onChange={() => toggleCaseSelection(allocation)}
+                      checked={selectedCases.length === assignableCasesCount && assignableCasesCount > 0}
+                      onChange={selectAllCases}
+                      disabled={assignableCasesCount === 0}
                     />
-                  </td>
-                  <td className="cell-mono">{allocation.caseId}</td>
-                  <td className="cell-mono">{allocation.externalCaseId || '-'}</td>
-                  <td>{allocation.agencyId}</td>
-                  <td>
-                    <span className="badge badge--info">{allocation.allocationStatus}</span>
-                  </td>
-                  <td>{formatDate(allocation.allocatedAt)}</td>
+                  </th>
+                  <th>Case ID</th>
+                  <th>External Case ID</th>
+                  <th>Assignment Status</th>
+                  <th>Agency</th>
+                  <th>Assigned Agent</th>
+                  <th>Assigned At</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {allCasesWithStatus.map((allocation) => {
+                  const assignment = allocation.assignments?.[0];
+                  // Can select if NOT already assigned to an agent
+                  const canSelect = allocation.assignmentStatus !== 'ASSIGNED_TO_AGENT';
 
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button
-                className="pagination__btn"
-                disabled={page === 0}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                Previous
-              </button>
-              <span className="pagination__info">
-                Page {page + 1} of {totalPages} ({totalElements} total)
-              </span>
-              <button
-                className="pagination__btn"
-                disabled={page >= totalPages - 1}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next
-              </button>
+                  return (
+                    <tr key={allocation.caseId}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={selectedCases.some((c) => c.caseId === allocation.caseId)}
+                          onChange={() => toggleCaseSelection(allocation)}
+                          disabled={!canSelect}
+                        />
+                      </td>
+                      <td className="cell-mono">{allocation.caseId}</td>
+                      <td className="cell-mono">{allocation.externalCaseId || '-'}</td>
+                      <td>
+                        <span className={`badge ${getAssignmentStatusBadgeClass(allocation.assignmentStatus)}`}>
+                          {AssignmentStatusLabels[allocation.assignmentStatus]}
+                        </span>
+                      </td>
+                      <td>
+                        {assignment ? (
+                          <div>
+                            <div>{assignment.agencyName}</div>
+                            <div className="cell-sub">{assignment.agencyCode}</div>
+                          </div>
+                        ) : '-'}
+                      </td>
+                      <td>
+                        {assignment?.agentName || '-'}
+                      </td>
+                      <td>{assignment?.assignedAt ? formatDate(assignment.assignedAt) : '-'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {totalPages > 1 && (
+              <div className="pagination">
+                <button
+                  className="pagination__btn"
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  Previous
+                </button>
+                <span className="pagination__info">
+                  Page {page + 1} of {totalPages} ({totalElements} total)
+                </span>
+                <button
+                  className="pagination__btn"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </>
+    );
+  };
+
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const formatPercent = (value: number): string => {
+    return `${value.toFixed(1)}%`;
+  };
+
+  const renderAgencyPerformanceTab = () => {
+    const activeAgencies = agencies.filter(a => a.status === 'ACTIVE');
+
+    return (
+      <>
+        <div className="tab-toolbar">
+          <div className="performance-agency-selector">
+            <label className="form-label">Select Agency</label>
+            <select
+              className="form-select"
+              value={performanceAgencyId || ''}
+              onChange={(e) => {
+                const agencyId = parseInt(e.target.value) || null;
+                setPerformanceAgencyId(agencyId);
+                if (agencyId) {
+                  fetchAgencyDashboard(agencyId);
+                } else {
+                  setAgencyDashboard(null);
+                }
+              }}
+            >
+              <option value="">-- Select an Agency --</option>
+              {activeAgencies.map((agency) => (
+                <option key={agency.id} value={agency.id}>
+                  {agency.agencyName} ({agency.agencyCode})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {!performanceAgencyId ? (
+          <div className="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 3V21H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M7 16L11 12L15 14L21 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <p>Select an Agency</p>
+            <span>Choose an agency from the dropdown to view performance metrics</span>
+          </div>
+        ) : loading ? (
+          <div className="loading-container">
+            <div className="spinner"></div>
+            <p>Loading dashboard...</p>
+          </div>
+        ) : !agencyDashboard ? (
+          <div className="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+              <path d="M12 8V12M12 16H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <p>No Data Available</p>
+            <span>Dashboard data is not available for this agency</span>
+          </div>
+        ) : (
+          <div className="performance-dashboard">
+            <div className="performance-metrics-grid">
+              {/* Case Statistics */}
+              <div className="metric-card metric-card--primary">
+                <div className="metric-card__icon">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
+                    <path d="M2 10H22" stroke="currentColor" strokeWidth="2" />
+                  </svg>
+                </div>
+                <div className="metric-card__content">
+                  <div className="metric-card__value">{agencyDashboard.totalCases}</div>
+                  <div className="metric-card__label">Total Cases</div>
+                </div>
+              </div>
+
+              <div className="metric-card metric-card--info">
+                <div className="metric-card__icon">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                    <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <div className="metric-card__content">
+                  <div className="metric-card__value">{agencyDashboard.activeCases}</div>
+                  <div className="metric-card__label">Active Cases</div>
+                </div>
+              </div>
+
+              <div className="metric-card metric-card--success">
+                <div className="metric-card__icon">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 12L11 14L15 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                  </svg>
+                </div>
+                <div className="metric-card__content">
+                  <div className="metric-card__value">{agencyDashboard.resolvedCases}</div>
+                  <div className="metric-card__label">Resolved Cases</div>
+                </div>
+              </div>
+
+              <div className="metric-card metric-card--warning">
+                <div className="metric-card__icon">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <div className="metric-card__content">
+                  <div className="metric-card__value">{agencyDashboard.avgResolutionDays}</div>
+                  <div className="metric-card__label">Avg Resolution Days</div>
+                </div>
+              </div>
             </div>
-          )}
-        </>
-      )}
-    </>
-  );
+
+            {/* Financial Metrics */}
+            <div className="performance-section">
+              <h3 className="section-title">Financial Performance</h3>
+              <div className="financial-metrics-grid">
+                <div className="financial-card">
+                  <div className="financial-card__header">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 1V23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M17 5H9.5C8.57174 5 7.6815 5.36875 7.02513 6.02513C6.36875 6.6815 6 7.57174 6 8.5C6 9.42826 6.36875 10.3185 7.02513 10.9749C7.6815 11.6313 8.57174 12 9.5 12H14.5C15.4283 12 16.3185 12.3687 16.9749 13.0251C17.6313 13.6815 18 14.5717 18 15.5C18 16.4283 17.6313 17.3185 16.9749 17.9749C16.3185 18.6313 15.4283 19 14.5 19H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span>Total Collected</span>
+                  </div>
+                  <div className="financial-card__value">{formatCurrency(agencyDashboard.totalCollected)}</div>
+                </div>
+
+                <div className="financial-card">
+                  <div className="financial-card__header">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="1" y="4" width="22" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
+                      <path d="M1 10H23" stroke="currentColor" strokeWidth="2" />
+                    </svg>
+                    <span>Commission Earned</span>
+                  </div>
+                  <div className="financial-card__value financial-card__value--success">{formatCurrency(agencyDashboard.commissionEarned)}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* PTP Metrics */}
+            <div className="performance-section">
+              <h3 className="section-title">Promise to Pay (PTP) Metrics</h3>
+              <div className="ptp-metrics-grid">
+                <div className="ptp-card ptp-card--success">
+                  <div className="ptp-card__header">
+                    <span>PTP Kept Rate</span>
+                  </div>
+                  <div className="ptp-card__value">{formatPercent(agencyDashboard.ptpKeptRate)}</div>
+                  <div className="ptp-card__bar">
+                    <div
+                      className="ptp-card__bar-fill ptp-card__bar-fill--success"
+                      style={{ width: `${Math.min(agencyDashboard.ptpKeptRate, 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="ptp-card ptp-card--danger">
+                  <div className="ptp-card__header">
+                    <span>PTP Broken Rate</span>
+                  </div>
+                  <div className="ptp-card__value">{formatPercent(agencyDashboard.ptpBrokenRate)}</div>
+                  <div className="ptp-card__bar">
+                    <div
+                      className="ptp-card__bar-fill ptp-card__bar-fill--danger"
+                      style={{ width: `${Math.min(agencyDashboard.ptpBrokenRate, 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
 
   return (
     <div className="agency-management-page">
@@ -1935,6 +2210,20 @@ export function AgencyManagementPage() {
             </svg>
             Case Assignment
           </button>
+          <button
+            className={`tab-button ${activeTab === 'agency-performance' ? 'tab-button--active' : ''}`}
+            onClick={() => setActiveTab('agency-performance')}
+          >
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 3V21H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M7 16L11 12L15 14L21 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="21" cy="8" r="2" stroke="currentColor" strokeWidth="2" />
+              <circle cx="15" cy="14" r="2" stroke="currentColor" strokeWidth="2" />
+              <circle cx="11" cy="12" r="2" stroke="currentColor" strokeWidth="2" />
+              <circle cx="7" cy="16" r="2" stroke="currentColor" strokeWidth="2" />
+            </svg>
+            Agency Performance
+          </button>
         </div>
 
         <div className="tabs__content">
@@ -1942,6 +2231,7 @@ export function AgencyManagementPage() {
           {activeTab === 'pending-approval' && renderPendingApprovalTab()}
           {activeTab === 'agency-cases' && renderAgencyCasesTab()}
           {activeTab === 'case-assignment' && renderCaseAssignmentTab()}
+          {activeTab === 'agency-performance' && renderAgencyPerformanceTab()}
         </div>
       </div>
 
@@ -1977,6 +2267,7 @@ export function AgencyManagementPage() {
         }}
         selectedCases={selectedCases}
         agents={agents}
+        agencies={agencies}
         onAssign={handleAssignCases}
         loading={modalLoading}
       />

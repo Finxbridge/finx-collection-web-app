@@ -20,6 +20,7 @@ import type {
   CreateUserRequest,
   UpdateUserRequest,
   PermissionSummary,
+  ApprovedAgency,
 } from '@types'
 
 /**
@@ -273,6 +274,20 @@ export const userManagementService = {
       return payload
     }
     throw new Error(response.data.message || 'Failed to fetch user permissions')
+  },
+
+  /**
+   * Get approved agencies for dropdown (when creating user with AGENT role)
+   */
+  async getApprovedAgencies(): Promise<ApprovedAgency[]> {
+    const response = await apiClient.get<ApiResponse<ApprovedAgency[]>>(
+      API_ENDPOINTS.MANAGEMENT.USERS.APPROVED_AGENCIES
+    )
+    const payload = getPayload(response.data)
+    if (isSuccess(response.data.status) && payload) {
+      return payload
+    }
+    throw new Error(response.data.message || 'Failed to fetch approved agencies')
   },
 }
 

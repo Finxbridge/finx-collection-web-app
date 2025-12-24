@@ -17,6 +17,7 @@ import type {
   UpdateUserRequest,
   AllocationBucket,
   MasterData,
+  ApprovedAgency,
 } from '@types'
 import './UsersPage.css'
 
@@ -44,6 +45,9 @@ export function UsersPage() {
   const [cityOptions, setCityOptions] = useState<MasterData[]>([])
   const [stateOptions, setStateOptions] = useState<MasterData[]>([])
 
+  // Approved agencies for AGENT role
+  const [approvedAgencies, setApprovedAgencies] = useState<ApprovedAgency[]>([])
+
   // Allocation bucket options
   const allocationBucketOptions: AllocationBucket[] = ['DEFAULT', 'HIGH', 'MEDIUM', 'LOW']
 
@@ -63,6 +67,7 @@ export function UsersPage() {
     allocationPercentage: 100,
     allocationBucket: 'DEFAULT',
     teamId: null,
+    agencyId: null,
     roleIds: [],
   })
 
@@ -110,12 +115,22 @@ export function UsersPage() {
     }
   }, [])
 
+  const fetchApprovedAgencies = useCallback(async () => {
+    try {
+      const agencies = await userManagementService.getApprovedAgencies()
+      setApprovedAgencies(agencies)
+    } catch (err) {
+      console.error('Failed to fetch approved agencies:', err)
+    }
+  }, [])
+
   useEffect(() => {
     fetchUsers()
     fetchRoles()
     fetchCityOptions()
     fetchStateOptions()
-  }, [fetchUsers, fetchRoles, fetchCityOptions, fetchStateOptions])
+    fetchApprovedAgencies()
+  }, [fetchUsers, fetchRoles, fetchCityOptions, fetchStateOptions, fetchApprovedAgencies])
 
   const handleViewUser = (user: UserSummary) => {
     navigate(`/access-management/users/${user.id}`)
@@ -131,6 +146,7 @@ export function UsersPage() {
         allocationBucket?: AllocationBucket
         userGroupId?: number | null
         teamId?: number | null
+        agencyId?: number | null
       }
       setSelectedUser(fullUser)
       setFormData({
@@ -148,6 +164,7 @@ export function UsersPage() {
         allocationPercentage: fullUser.allocationPercentage || 100,
         allocationBucket: fullUser.allocationBucket || 'DEFAULT',
         teamId: fullUser.teamId || null,
+        agencyId: fullUser.agencyId || null,
         roleIds: fullUser.roles?.map((r: { id: number }) => r.id) || [],
       })
       setIsEditModalOpen(true)
@@ -192,6 +209,7 @@ export function UsersPage() {
         allocationPercentage: formData.allocationPercentage,
         allocationBucket: formData.allocationBucket,
         teamId: formData.teamId,
+        agencyId: formData.agencyId,
         roleIds: formData.roleIds,
       }
       await userManagementService.update(selectedUser.id, updateData)
@@ -237,10 +255,17 @@ export function UsersPage() {
       allocationPercentage: 100,
       allocationBucket: 'DEFAULT',
       teamId: null,
+      agencyId: null,
       roleIds: [],
     })
     setSelectedUser(null)
   }
+
+  // Check if AGENT role is selected
+  const isAgentRoleSelected = formData.roleIds.some((roleId) => {
+    const role = roles.find((r) => r.id === roleId)
+    return role?.name?.toUpperCase() === 'AGENT' || role?.code?.toUpperCase() === 'AGENT'
+  })
 
   const openCreateModal = () => {
     resetForm()
@@ -574,6 +599,7 @@ export function UsersPage() {
                         setFormData({
                           ...formData,
                           roleIds: formData.roleIds.filter((id) => id !== role.id),
+                          agencyId: null, // Clear agencyId when role changes
                         })
                       }
                     }}
@@ -583,6 +609,24 @@ export function UsersPage() {
               ))}
             </div>
           </div>
+          {isAgentRoleSelected && (
+            <div className="form-group">
+              <label className="form-label">Agency</label>
+              <select
+                className="form-input"
+                value={formData.agencyId || ''}
+                onChange={(e) => setFormData({ ...formData, agencyId: e.target.value ? parseInt(e.target.value) : null })}
+                required
+              >
+                <option value="">Select Agency</option>
+                {approvedAgencies.map((agency) => (
+                  <option key={agency.id} value={agency.id}>
+                    {agency.agencyName} ({agency.agencyCode})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </form>
       </Modal>
 
@@ -745,6 +789,7 @@ export function UsersPage() {
                         setFormData({
                           ...formData,
                           roleIds: formData.roleIds.filter((id) => id !== role.id),
+                          agencyId: null, // Clear agencyId when role changes
                         })
                       }
                     }}
@@ -754,6 +799,24 @@ export function UsersPage() {
               ))}
             </div>
           </div>
+          {isAgentRoleSelected && (
+            <div className="form-group">
+              <label className="form-label">Agency</label>
+              <select
+                className="form-input"
+                value={formData.agencyId || ''}
+                onChange={(e) => setFormData({ ...formData, agencyId: e.target.value ? parseInt(e.target.value) : null })}
+                required
+              >
+                <option value="">Select Agency</option>
+                {approvedAgencies.map((agency) => (
+                  <option key={agency.id} value={agency.id}>
+                    {agency.agencyName} ({agency.agencyCode})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </form>
       </Modal>
 

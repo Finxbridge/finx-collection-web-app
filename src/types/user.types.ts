@@ -252,6 +252,13 @@ export interface UpdateRoleRequest {
 // ===================
 export type AllocationBucket = 'DEFAULT' | 'HIGH' | 'MEDIUM' | 'LOW'
 
+// Approved Agency for dropdown (when creating user with AGENT role)
+export interface ApprovedAgency {
+  id: number
+  agencyCode: string
+  agencyName: string
+}
+
 export interface CreateUserRequest {
   username: string
   email: string
@@ -267,6 +274,7 @@ export interface CreateUserRequest {
   allocationPercentage: number
   allocationBucket: AllocationBucket
   teamId?: number | null
+  agencyId?: number | null
   roleIds: number[]
 }
 
@@ -282,6 +290,7 @@ export interface UpdateUserRequest {
   allocationPercentage?: number
   allocationBucket?: AllocationBucket
   teamId?: number | null
+  agencyId?: number | null
   roleIds?: number[]
 }
 
