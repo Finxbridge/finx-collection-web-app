@@ -4,9 +4,11 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { workflowService } from '@services/api/workflow.service';
 import { repaymentService } from '@services/api/repayment.service';
+import { otsService } from '@services/api/ots.service';
+import { settlementLetterService } from '@services/api/settlementLetter.service';
 import type {
   WorkflowCaseDetail,
   WorkflowLoanDetails,
@@ -21,19 +23,32 @@ import type {
   WorkflowDocument,
   WorkflowTabType,
   CaseSummaryDTO,
+  OTSRequest,
+  SettlementLetterDTO,
 } from '@types';
 import { getDpdBadgeColor } from '@types';
 import { ROUTES } from '@config/constants';
 import './WorkflowCaseDetailPage.css';
 
+// Interface for location state
+interface LocationState {
+  activeTab?: WorkflowTabType;
+}
+
 export function WorkflowCaseDetailPage() {
   const { caseId } = useParams<{ caseId: string }>();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<WorkflowTabType>('loan-details');
+  const location = useLocation();
+  const locationState = location.state as LocationState | null;
+  const [activeTab, setActiveTab] = useState<WorkflowTabType>(locationState?.activeTab || 'loan-details');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<CaseSummaryDTO | null>(null);
   const [caseDetail, setCaseDetail] = useState<WorkflowCaseDetail | null>(null);
+  const [otsList, setOtsList] = useState<OTSRequest[]>([]);
+  const [otsLoading, setOtsLoading] = useState(false);
+  const [settlementLetters, setSettlementLetters] = useState<SettlementLetterDTO[]>([]);
+  const [expandedOtsId, setExpandedOtsId] = useState<number | null>(null);
   const [showPaymentDropdown, setShowPaymentDropdown] = useState(false);
   const paymentDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -52,8 +67,14 @@ export function WorkflowCaseDetailPage() {
   useEffect(() => {
     if (caseId) {
       fetchCaseData(parseInt(caseId));
+      // If navigating from OTS creation, fetch OTS data immediately
+      if (locationState?.activeTab === 'ots') {
+        fetchOtsList(parseInt(caseId));
+        // Clear the location state to prevent re-fetching on future navigations
+        window.history.replaceState({}, document.title);
+      }
     }
-  }, [caseId]);
+  }, [caseId, locationState?.activeTab]);
 
   const fetchCaseData = async (id: number) => {
     try {
@@ -69,6 +90,29 @@ export function WorkflowCaseDetailPage() {
       setError(err instanceof Error ? err.message : 'Failed to fetch case details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchOtsList = async (id: number) => {
+    try {
+      setOtsLoading(true);
+      // Fetch both OTS records and settlement letters in parallel
+      const [otsData, lettersData] = await Promise.all([
+        otsService.getOTSByCase(id),
+        settlementLetterService.getLettersByCaseId(id).catch(() => [] as SettlementLetterDTO[]),
+      ]);
+      setOtsList(otsData);
+      setSettlementLetters(lettersData);
+      // Auto-expand the first OTS if there's only one
+      if (otsData.length === 1) {
+        setExpandedOtsId(otsData[0].id);
+      }
+    } catch (err) {
+      console.error('Failed to fetch OTS list:', err);
+      setOtsList([]);
+      setSettlementLetters([]);
+    } finally {
+      setOtsLoading(false);
     }
   };
 
@@ -92,6 +136,31 @@ export function WorkflowCaseDetailPage() {
   const handleRecordPayment = () => {
     setShowPaymentDropdown(false);
     navigate(`${ROUTES.REPAYMENT_RECORD_PAYMENT}?${getPaymentParams()}`);
+  };
+
+  const handleCreateOTS = () => {
+    // Navigate to OTS page with case data for auto-population
+    navigate(ROUTES.OTS, {
+      state: {
+        createOTS: true,
+        caseId: caseId ? parseInt(caseId) : undefined,
+        loanAccountNumber: summary?.loanAccountNumber || caseDetail?.loanDetails?.loanAccountNumber,
+        customerName: summary?.customerName || caseDetail?.customerDetails?.fullName,
+        totalOutstanding: caseDetail?.loanDetails?.totalOutstanding || summary?.totalOutstanding,
+        pos: caseDetail?.loanDetails?.pos,
+        penaltyAmount: caseDetail?.loanDetails?.penaltyAmount,
+        charges: caseDetail?.loanDetails?.charges,
+        customerDetails: caseDetail?.customerDetails,
+        loanDetails: caseDetail?.loanDetails,
+      },
+    });
+  };
+
+  const handleTabChange = (tabId: WorkflowTabType) => {
+    setActiveTab(tabId);
+    if (tabId === 'ots' && caseId && otsList.length === 0) {
+      fetchOtsList(parseInt(caseId));
+    }
   };
 
   const formatCurrency = (amount: number | undefined): string => {
@@ -184,6 +253,17 @@ export function WorkflowCaseDetailPage() {
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M9 12L11 14L15 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+        </svg>
+      ),
+    },
+    {
+      id: 'ots',
+      label: 'OTS',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 14L11 16L15 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" stroke="currentColor" strokeWidth="2" />
+          <path d="M8 8h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
       ),
     },
@@ -656,6 +736,320 @@ export function WorkflowCaseDetailPage() {
     </div>
   );
 
+  const getOtsStatusBadgeClass = (status: string): string => {
+    switch (status) {
+      case 'APPROVED':
+        return 'badge--success';
+      case 'REJECTED':
+        return 'badge--danger';
+      case 'EXPIRED':
+        return 'badge--orange';
+      case 'PENDING_APPROVAL':
+      default:
+        return 'badge--warning';
+    }
+  };
+
+  const getLetterStatusBadgeClass = (status: string): string => {
+    switch (status) {
+      case 'SENT':
+      case 'DOWNLOADED':
+        return 'badge--success';
+      case 'GENERATED':
+        return 'badge--info';
+      case 'EXPIRED':
+      case 'CANCELLED':
+        return 'badge--danger';
+      default:
+        return 'badge--default';
+    }
+  };
+
+  const handleViewLetterPdf = async (letterId: number) => {
+    try {
+      const blob = await settlementLetterService.downloadLetterPdf(letterId);
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      console.error('Failed to view letter:', err);
+      alert('Failed to view settlement letter');
+    }
+  };
+
+  const handleDownloadLetterPdf = async (letterId: number, letterNumber: string) => {
+    try {
+      const blob = await settlementLetterService.downloadLetterPdf(letterId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `settlement-letter-${letterNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download letter:', err);
+      alert('Failed to download settlement letter');
+    }
+  };
+
+  const getLetterForOts = (otsId: number): SettlementLetterDTO | undefined => {
+    return settlementLetters.find(letter => letter.otsId === otsId);
+  };
+
+  const renderOtsList = () => {
+    // Check if there's a pending OTS that would prevent creating a new one
+    // User can create new OTS if: no OTS exists, or existing OTS is APPROVED, REJECTED, or EXPIRED
+    // User CANNOT create new OTS if: existing OTS is PENDING_APPROVAL (still under review)
+    const hasPendingOTS = otsList.some((ots) => {
+      const status = ots.status || ots.otsStatus || '';
+      return status === 'PENDING_APPROVAL';
+    });
+    const canCreateNewOTS = !hasPendingOTS;
+
+    return (
+    <div className="tab-content">
+      {otsLoading ? (
+        <div className="loading-container">
+          <div className="spinner"></div>
+          <p>Loading OTS records...</p>
+        </div>
+      ) : otsList.length === 0 ? (
+        <div className="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 14L11 16L15 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" stroke="currentColor" strokeWidth="2" />
+            <path d="M8 8h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <p>No OTS records found</p>
+          <span>No One-Time Settlement requests available for this case</span>
+          <button className="btn-primary" onClick={handleCreateOTS} style={{ marginTop: '16px' }}>
+            Create OTS Request
+          </button>
+        </div>
+      ) : (
+        <>
+          {canCreateNewOTS && (
+            <div className="tab-header-actions">
+              <button className="btn-primary" onClick={handleCreateOTS}>
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 5V19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Create New OTS
+              </button>
+            </div>
+          )}
+          <div className="ots-cards-container">
+            {otsList.map((ots) => {
+              const letter = getLetterForOts(ots.id);
+              const isExpanded = expandedOtsId === ots.id;
+              const status = ots.status || ots.otsStatus || '';
+
+              return (
+                <div key={ots.id} className={`ots-card ${isExpanded ? 'ots-card--expanded' : ''}`}>
+                  {/* Card Header - Always visible */}
+                  <div
+                    className="ots-card__header"
+                    onClick={() => setExpandedOtsId(isExpanded ? null : ots.id)}
+                  >
+                    <div className="ots-card__header-left">
+                      <span className="ots-card__number">{ots.otsNumber || '-'}</span>
+                      <span className={`badge ${getOtsStatusBadgeClass(status)}`}>
+                        {status.replace(/_/g, ' ') || '-'}
+                      </span>
+                    </div>
+                    <div className="ots-card__header-right">
+                      <span className="ots-card__amount">{formatCurrency(ots.settlementAmount)}</span>
+                      <svg
+                        className={`ots-card__chevron ${isExpanded ? 'ots-card__chevron--open' : ''}`}
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Card Body - Expandable */}
+                  {isExpanded && (
+                    <div className="ots-card__body">
+                      {/* Settlement Details Section */}
+                      <div className="ots-section">
+                        <h4 className="ots-section__title">Settlement Details</h4>
+                        <div className="ots-details-grid">
+                          <div className="ots-detail">
+                            <span className="ots-detail__label">Original Outstanding</span>
+                            <span className="ots-detail__value">{formatCurrency(ots.originalOutstanding || ots.originalAmount)}</span>
+                          </div>
+                          <div className="ots-detail">
+                            <span className="ots-detail__label">Settlement Amount</span>
+                            <span className="ots-detail__value ots-detail__value--highlight">{formatCurrency(ots.settlementAmount || ots.proposedSettlement)}</span>
+                          </div>
+                          <div className="ots-detail">
+                            <span className="ots-detail__label">Waiver Amount</span>
+                            <span className="ots-detail__value ots-detail__value--success">{formatCurrency(ots.waiverAmount || ots.discountAmount)}</span>
+                          </div>
+                          <div className="ots-detail">
+                            <span className="ots-detail__label">Discount</span>
+                            <span className="ots-detail__value">{ots.discountPercentage != null || ots.waiverPercentage != null ? `${ots.discountPercentage || ots.waiverPercentage}%` : '-'}</span>
+                          </div>
+                          <div className="ots-detail">
+                            <span className="ots-detail__label">Payment Mode</span>
+                            <span className="ots-detail__value">{ots.paymentMode || '-'}</span>
+                          </div>
+                          <div className="ots-detail">
+                            <span className="ots-detail__label">Valid Until</span>
+                            <span className="ots-detail__value">{formatDate(ots.validUntil || ots.paymentDeadline)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Approval Information Section */}
+                      <div className="ots-section">
+                        <h4 className="ots-section__title">Approval Information</h4>
+                        <div className="ots-details-grid">
+                          <div className="ots-detail">
+                            <span className="ots-detail__label">Status</span>
+                            <span className={`badge ${getOtsStatusBadgeClass(status)}`}>
+                              {status.replace(/_/g, ' ') || '-'}
+                            </span>
+                          </div>
+                          {(status === 'APPROVED') && (
+                            <>
+                              <div className="ots-detail">
+                                <span className="ots-detail__label">Approval Date</span>
+                                <span className="ots-detail__value">{formatDateTime(ots.approvalDate)}</span>
+                              </div>
+                              {ots.settledAt && (
+                                <div className="ots-detail">
+                                  <span className="ots-detail__label">Settled At</span>
+                                  <span className="ots-detail__value">{formatDateTime(ots.settledAt)}</span>
+                                </div>
+                              )}
+                              {ots.settledAmount && (
+                                <div className="ots-detail">
+                                  <span className="ots-detail__label">Settled Amount</span>
+                                  <span className="ots-detail__value">{formatCurrency(ots.settledAmount)}</span>
+                                </div>
+                              )}
+                            </>
+                          )}
+                          {(status === 'REJECTED') && ots.rejectionReason && (
+                            <div className="ots-detail ots-detail--full">
+                              <span className="ots-detail__label">Rejection Reason</span>
+                              <span className="ots-detail__value ots-detail__value--danger">{ots.rejectionReason}</span>
+                            </div>
+                          )}
+                          {ots.cancellationReason && (
+                            <div className="ots-detail ots-detail--full">
+                              <span className="ots-detail__label">Cancellation Reason</span>
+                              <span className="ots-detail__value ots-detail__value--danger">{ots.cancellationReason}</span>
+                            </div>
+                          )}
+                          <div className="ots-detail">
+                            <span className="ots-detail__label">Created By</span>
+                            <span className="ots-detail__value">{ots.intentCapturedByName || '-'}</span>
+                          </div>
+                          <div className="ots-detail">
+                            <span className="ots-detail__label">Created At</span>
+                            <span className="ots-detail__value">{formatDateTime(ots.createdAt)}</span>
+                          </div>
+                          {ots.borrowerConsent !== undefined && (
+                            <div className="ots-detail">
+                              <span className="ots-detail__label">Borrower Consent</span>
+                              <span className={`badge ${ots.borrowerConsent ? 'badge--success' : 'badge--warning'}`}>
+                                {ots.borrowerConsent ? 'Yes' : 'No'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        {ots.notes && (
+                          <div className="ots-notes">
+                            <span className="ots-notes__label">Notes</span>
+                            <p className="ots-notes__text">{ots.notes}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Settlement Letter Section */}
+                      <div className="ots-section">
+                        <h4 className="ots-section__title">Settlement Letter</h4>
+                        {letter ? (
+                          <div className="ots-letter-card">
+                            <div className="ots-letter-card__info">
+                              <div className="ots-letter-card__header">
+                                <span className="ots-letter-card__number">{letter.letterNumber}</span>
+                                <span className={`badge ${getLetterStatusBadgeClass(letter.letterStatus)}`}>
+                                  {letter.letterStatus?.replace(/_/g, ' ') || '-'}
+                                </span>
+                              </div>
+                              <div className="ots-letter-details">
+                                <span className="ots-letter-detail">
+                                  <strong>Template:</strong> {letter.templateName || '-'}
+                                </span>
+                                <span className="ots-letter-detail">
+                                  <strong>Generated:</strong> {formatDateTime(letter.generatedAt)}
+                                </span>
+                                {letter.sentAt && (
+                                  <span className="ots-letter-detail">
+                                    <strong>Sent:</strong> {formatDateTime(letter.sentAt)} via {letter.sentVia}
+                                  </span>
+                                )}
+                                {letter.downloadCount > 0 && (
+                                  <span className="ots-letter-detail">
+                                    <strong>Downloads:</strong> {letter.downloadCount}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="ots-letter-card__actions">
+                              <button
+                                className="btn-action btn-action--view"
+                                onClick={() => handleViewLetterPdf(letter.id)}
+                                title="View Letter"
+                              >
+                                <svg viewBox="0 0 24 24" fill="none">
+                                  <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                  <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+                                </svg>
+                              </button>
+                              <button
+                                className="btn-action btn-action--download"
+                                onClick={() => handleDownloadLetterPdf(letter.id, letter.letterNumber)}
+                                title="Download Letter"
+                              >
+                                <svg viewBox="0 0 24 24" fill="none">
+                                  <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                  <polyline points="7 10 12 15 17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                  <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        ) : status === 'APPROVED' ? (
+                          <div className="ots-letter-empty">
+                            <p>Settlement letter not yet generated</p>
+                          </div>
+                        ) : (
+                          <div className="ots-letter-empty">
+                            <p>Settlement letter will be available after OTS approval</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+  };
+
   const renderNotices = (notices: WorkflowNotice[]) => (
     <div className="tab-content">
       {notices.length === 0 ? (
@@ -927,6 +1321,8 @@ export function WorkflowCaseDetailPage() {
         return renderRepayments(caseDetail.repayments || []);
       case 'ptps':
         return renderPtps(caseDetail.ptps || []);
+      case 'ots':
+        return renderOtsList();
       case 'notices':
         return renderNotices(caseDetail.notices || []);
       case 'calls':
@@ -987,53 +1383,63 @@ export function WorkflowCaseDetailPage() {
             {summary?.customerName} • {summary?.loanAccountNumber}
           </p>
         </div>
-        <div className="collect-payment-dropdown" ref={paymentDropdownRef}>
-          <button
-            className="btn-collect-payment"
-            onClick={() => setShowPaymentDropdown(!showPaymentDropdown)}
-          >
+        <div className="header-actions">
+          <button className="btn-ots" onClick={handleCreateOTS}>
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
-              <path d="M2 10H22" stroke="currentColor" strokeWidth="2" />
-              <path d="M6 16H10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path d="M9 14L11 16L15 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" stroke="currentColor" strokeWidth="2" />
+              <path d="M8 8h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            Collect Payment
-            <svg className={`dropdown-arrow ${showPaymentDropdown ? 'dropdown-arrow--open' : ''}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            OTS
           </button>
-          {showPaymentDropdown && (
-            <div className="payment-dropdown-menu">
-              <button className="payment-dropdown-item" onClick={handleDigitalPayment}>
-                <div className="payment-dropdown-item__icon payment-dropdown-item__icon--digital">
-                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
-                    <path d="M7 15H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                    <path d="M14 15H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                    <path d="M2 10H22" stroke="currentColor" strokeWidth="2" />
-                  </svg>
-                </div>
-                <div className="payment-dropdown-item__content">
-                  <span className="payment-dropdown-item__title">Digital Payment</span>
-                  <span className="payment-dropdown-item__desc">UPI, QR Code, Payment Link</span>
-                </div>
-              </button>
-              <button className="payment-dropdown-item" onClick={handleRecordPayment}>
-                <div className="payment-dropdown-item__icon payment-dropdown-item__icon--cash">
-                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="2" y="6" width="20" height="12" rx="2" stroke="currentColor" strokeWidth="2" />
-                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
-                    <path d="M6 12H6.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                    <path d="M18 12H18.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  </svg>
-                </div>
-                <div className="payment-dropdown-item__content">
-                  <span className="payment-dropdown-item__title">Record Payment</span>
-                  <span className="payment-dropdown-item__desc">Cash or Cheque</span>
-                </div>
-              </button>
-            </div>
-          )}
+          <div className="collect-payment-dropdown" ref={paymentDropdownRef}>
+            <button
+              className="btn-collect-payment"
+              onClick={() => setShowPaymentDropdown(!showPaymentDropdown)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
+                <path d="M2 10H22" stroke="currentColor" strokeWidth="2" />
+                <path d="M6 16H10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              Collect Payment
+              <svg className={`dropdown-arrow ${showPaymentDropdown ? 'dropdown-arrow--open' : ''}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            {showPaymentDropdown && (
+              <div className="payment-dropdown-menu">
+                <button className="payment-dropdown-item" onClick={handleDigitalPayment}>
+                  <div className="payment-dropdown-item__icon payment-dropdown-item__icon--digital">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
+                      <path d="M7 15H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M14 15H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M2 10H22" stroke="currentColor" strokeWidth="2" />
+                    </svg>
+                  </div>
+                  <div className="payment-dropdown-item__content">
+                    <span className="payment-dropdown-item__title">Digital Payment</span>
+                    <span className="payment-dropdown-item__desc">UPI, QR Code, Payment Link</span>
+                  </div>
+                </button>
+                <button className="payment-dropdown-item" onClick={handleRecordPayment}>
+                  <div className="payment-dropdown-item__icon payment-dropdown-item__icon--cash">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="2" y="6" width="20" height="12" rx="2" stroke="currentColor" strokeWidth="2" />
+                      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+                      <path d="M6 12H6.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M18 12H18.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <div className="payment-dropdown-item__content">
+                    <span className="payment-dropdown-item__title">Record Payment</span>
+                    <span className="payment-dropdown-item__desc">Cash or Cheque</span>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1074,7 +1480,7 @@ export function WorkflowCaseDetailPage() {
             <button
               key={tab.id}
               className={`tab-button ${activeTab === tab.id ? 'tab-button--active' : ''}`}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
             >
               <span className="tab-button__icon">{tab.icon}</span>
               <span className="tab-button__label">{tab.label}</span>

@@ -1,15 +1,23 @@
 /**
  * OTS (One-Time Settlement) Page
- * Main page for OTS management with tabs for All OTS, Pending Approvals, and Create OTS
+ * Main page for OTS management with tabs for All OTS, Pending Approvals, Create OTS, and Settlement Letters
  */
 
-import { useState, useEffect, useCallback } from 'react'
-import { otsService } from '@services/api'
-import type { OTSRequest, OTSStatus, CreateOTSRequest } from '@types'
-import { OTS_STATUS_LABELS, OTS_STATUS_COLORS } from '@types'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { otsService, settlementLetterService } from '@services/api'
+import type {
+  OTSRequest,
+  OTSStatus,
+  CreateOTSRequest,
+  OTSCaseSearchDTO,
+  SettlementLetterDTO,
+  LetterStatus,
+} from '@types'
+import { OTS_STATUS_LABELS, OTS_STATUS_COLORS, LETTER_STATUS_LABELS, LETTER_STATUS_COLORS } from '@types'
 import './OTSPage.css'
 
-type TabType = 'all' | 'pending' | 'create'
+type TabType = 'all' | 'pending' | 'create' | 'letters'
 
 interface PageResponse<T> {
   content: T[]
@@ -19,8 +27,27 @@ interface PageResponse<T> {
   number: number
 }
 
+// Interface for location state from MyWorkflow
+interface LocationState {
+  createOTS?: boolean
+  caseId?: number
+  loanAccountNumber?: string
+  customerName?: string
+  totalOutstanding?: number
+  pos?: number
+  penaltyAmount?: number
+  charges?: number
+  customerDetails?: Record<string, unknown>
+  loanDetails?: Record<string, unknown>
+}
+
 export function OTSPage() {
-  const [activeTab, setActiveTab] = useState<TabType>('all')
+  const location = useLocation()
+  const navigate = useNavigate()
+  const locationState = location.state as LocationState | null
+  const [activeTab, setActiveTab] = useState<TabType>(locationState?.createOTS ? 'create' : 'all')
+  // Store the source case ID to navigate back after OTS creation
+  const [sourceCaseId] = useState<number | undefined>(locationState?.caseId)
   const [otsList, setOtsList] = useState<OTSRequest[]>([])
   const [pendingList, setPendingList] = useState<OTSRequest[]>([])
   const [loading, setLoading] = useState(true)
@@ -51,6 +78,28 @@ export function OTSPage() {
   })
   const [createLoading, setCreateLoading] = useState(false)
   const [createSuccess, setCreateSuccess] = useState('')
+
+  // Case search state
+  const [caseSearchQuery, setCaseSearchQuery] = useState('')
+  const [caseSearchResults, setCaseSearchResults] = useState<OTSCaseSearchDTO[]>([])
+  const [caseSearchLoading, setCaseSearchLoading] = useState(false)
+  const [showCaseDropdown, setShowCaseDropdown] = useState(false)
+  const [selectedCase, setSelectedCase] = useState<OTSCaseSearchDTO | null>(null)
+  const caseSearchRef = useRef<HTMLDivElement>(null)
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Settlement letters state
+  const [lettersList, setLettersList] = useState<SettlementLetterDTO[]>([])
+  const [lettersLoading, setLettersLoading] = useState(false)
+  const [lettersPage, setLettersPage] = useState(0)
+  const [lettersTotalPages, setLettersTotalPages] = useState(0)
+  const [lettersTotalElements, setLettersTotalElements] = useState(0)
+
+  // Settlement letter modal state (shown after approval)
+  const [showLetterModal, setShowLetterModal] = useState(false)
+  const [approvedOTSForLetter, setApprovedOTSForLetter] = useState<OTSRequest | null>(null)
+  const [letterGenerating, setLetterGenerating] = useState(false)
+  const [generatedLetter, setGeneratedLetter] = useState<SettlementLetterDTO | null>(null)
 
   const fetchOTSList = useCallback(async () => {
     try {
@@ -88,13 +137,130 @@ export function OTSPage() {
     }
   }, [])
 
+  const fetchSettlementLetters = useCallback(async () => {
+    try {
+      setLettersLoading(true)
+      setError('')
+      const response = await settlementLetterService.getAllLetters(lettersPage, 20)
+      setLettersList(response.content)
+      setLettersTotalPages(response.totalPages)
+      setLettersTotalElements(response.totalElements)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load settlement letters')
+    } finally {
+      setLettersLoading(false)
+    }
+  }, [lettersPage])
+
   useEffect(() => {
     if (activeTab === 'all') {
       fetchOTSList()
     } else if (activeTab === 'pending') {
       fetchPendingApprovals()
+    } else if (activeTab === 'letters') {
+      fetchSettlementLetters()
     }
-  }, [activeTab, fetchOTSList, fetchPendingApprovals])
+  }, [activeTab, fetchOTSList, fetchPendingApprovals, fetchSettlementLetters])
+
+  // Handle incoming state from MyWorkflow for auto-population
+  useEffect(() => {
+    if (locationState?.createOTS && locationState.caseId) {
+      // Create a synthetic case object for display
+      const syntheticCase: OTSCaseSearchDTO = {
+        caseId: locationState.caseId,
+        caseNumber: `CASE-${locationState.caseId}`,
+        loanAccountNumber: locationState.loanAccountNumber || '',
+        customerName: locationState.customerName || '',
+        totalOutstanding: locationState.totalOutstanding || 0,
+        bucket: '',
+        dpd: 0,
+      }
+      setSelectedCase(syntheticCase)
+      setCaseSearchQuery(locationState.loanAccountNumber || locationState.customerName || '')
+
+      // Pre-populate form with case data
+      setCreateForm((prev) => ({
+        ...prev,
+        caseId: locationState.caseId,
+        originalOutstanding: locationState.totalOutstanding,
+      }))
+
+      // Clear location state after processing to prevent re-processing on navigation
+      window.history.replaceState({}, document.title)
+    }
+  }, [locationState])
+
+  // Handle click outside to close case search dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (caseSearchRef.current && !caseSearchRef.current.contains(event.target as Node)) {
+        setShowCaseDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Search cases for OTS
+  const handleCaseSearch = useCallback(async (query: string) => {
+    if (query.length < 2) {
+      setCaseSearchResults([])
+      setShowCaseDropdown(false)
+      return
+    }
+
+    try {
+      setCaseSearchLoading(true)
+      const response = await otsService.searchCasesForOTS(query, 0, 10)
+      setCaseSearchResults(response.content)
+      setShowCaseDropdown(true)
+    } catch (err) {
+      console.error('Case search failed:', err)
+      setCaseSearchResults([])
+    } finally {
+      setCaseSearchLoading(false)
+    }
+  }, [])
+
+  // Debounced search handler
+  const handleCaseSearchInput = (value: string) => {
+    setCaseSearchQuery(value)
+
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current)
+    }
+
+    searchDebounceRef.current = setTimeout(() => {
+      handleCaseSearch(value)
+    }, 300)
+  }
+
+  // Handle case selection
+  const handleCaseSelect = (caseData: OTSCaseSearchDTO) => {
+    setSelectedCase(caseData)
+    setCaseSearchQuery('')
+    setShowCaseDropdown(false)
+    setCaseSearchResults([])
+
+    // Auto-populate form fields
+    setCreateForm({
+      ...createForm,
+      caseId: caseData.caseId,
+      originalOutstanding: caseData.totalOutstanding,
+      proposedSettlement: undefined, // User needs to enter this
+    })
+  }
+
+  // Clear selected case
+  const handleClearCase = () => {
+    setSelectedCase(null)
+    setCreateForm({
+      ...createForm,
+      caseId: undefined,
+      originalOutstanding: undefined,
+      proposedSettlement: undefined,
+    })
+  }
 
   const formatCurrency = (amount: number | undefined): string => {
     if (amount === undefined || amount === null) return '-'
@@ -150,11 +316,27 @@ export function OTSPage() {
   const handleApprove = async (otsId: number, comments?: string) => {
     try {
       setModalLoading(true)
-      await otsService.approveOTS(otsId, comments)
+      const approvedOTS = await otsService.approveOTS(otsId, comments)
       setShowApprovalModal(false)
       setReviewingOTSId(null)
       fetchPendingApprovals()
       fetchOTSList()
+
+      // Show settlement letter modal after successful approval
+      setApprovedOTSForLetter(approvedOTS)
+      setLetterGenerating(true)
+      setShowLetterModal(true)
+
+      // Fetch the auto-generated settlement letter
+      try {
+        const letter = await settlementLetterService.getLetterByOtsId(approvedOTS.id)
+        setGeneratedLetter(letter)
+      } catch {
+        // Letter might not exist yet, set to null
+        setGeneratedLetter(null)
+      } finally {
+        setLetterGenerating(false)
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to approve OTS')
     } finally {
@@ -198,6 +380,8 @@ export function OTSPage() {
         borrowerConsent: createForm.borrowerConsent,
       })
       setCreateSuccess('OTS created successfully!')
+      const caseIdToNavigate = createForm.caseId
+      setSelectedCase(null)
       setCreateForm({
         caseId: undefined,
         originalOutstanding: undefined,
@@ -210,22 +394,23 @@ export function OTSPage() {
       })
       setTimeout(() => {
         setCreateSuccess('')
-        setActiveTab('all')
+        // If OTS was created from a case (via MyWorkflow), navigate back to that case's OTS tab
+        if (sourceCaseId || caseIdToNavigate) {
+          const targetCaseId = sourceCaseId || caseIdToNavigate
+          navigate(`/workflow/case/${targetCaseId}`, { state: { activeTab: 'ots' } })
+        } else {
+          setActiveTab('all')
+        }
       }, 2000)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create OTS')
+    } catch (err: unknown) {
+      // Handle different error formats - axios interceptor returns ApiError object
+      const errorMessage =
+        (err as { message?: string })?.message ||
+        (err instanceof Error ? err.message : 'Failed to create OTS')
+      setError(errorMessage)
     } finally {
       setCreateLoading(false)
     }
-  }
-
-  const calculateDiscount = (): { amount: number; percentage: number } => {
-    if (!createForm.originalOutstanding || !createForm.proposedSettlement) {
-      return { amount: 0, percentage: 0 }
-    }
-    const amount = createForm.originalOutstanding - createForm.proposedSettlement
-    const percentage = (amount / createForm.originalOutstanding) * 100
-    return { amount, percentage }
   }
 
   const filteredOTSList = otsList.filter((ots) => {
@@ -238,7 +423,66 @@ export function OTSPage() {
     )
   })
 
-  if (loading && activeTab !== 'create') {
+  // Letter status badge helper
+  const getLetterStatusBadgeClass = (status: LetterStatus | undefined): string => {
+    if (!status) return 'badge--default'
+    const color = LETTER_STATUS_COLORS[status]
+    switch (color) {
+      case 'success':
+        return 'badge--success'
+      case 'warning':
+        return 'badge--warning'
+      case 'danger':
+        return 'badge--danger'
+      case 'info':
+        return 'badge--info'
+      default:
+        return 'badge--default'
+    }
+  }
+
+  const getLetterStatusLabel = (status: LetterStatus | undefined): string => {
+    if (!status) return '-'
+    return LETTER_STATUS_LABELS[status] || status
+  }
+
+  // Download letter PDF
+  const handleDownloadPdf = async (letterId: number, letterNumber: string) => {
+    try {
+      const blob = await settlementLetterService.downloadLetterPdf(letterId)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Settlement_Letter_${letterNumber}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+
+      // Mark as downloaded and refresh if on letters tab
+      await settlementLetterService.downloadLetter(letterId)
+      if (activeTab === 'letters') {
+        fetchSettlementLetters()
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to download PDF')
+    }
+  }
+
+  // View letter PDF in new tab
+  const handleViewLetter = async (letterId: number) => {
+    try {
+      const blob = await settlementLetterService.downloadLetterPdf(letterId)
+      const url = window.URL.createObjectURL(blob)
+      window.open(url, '_blank')
+      // Clean up the URL after a delay to allow the new tab to load
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to view letter')
+    }
+  }
+
+  if (loading && activeTab !== 'create' && activeTab !== 'letters') {
     return (
       <div className="ots-page">
         <div className="loading-container">
@@ -294,13 +538,19 @@ export function OTSPage() {
           className={`ots-tab ${activeTab === 'pending' ? 'ots-tab--active' : ''}`}
           onClick={() => setActiveTab('pending')}
         >
-          Pending Approvals ({pendingList.length})
+          Pending Approvals
         </button>
         <button
           className={`ots-tab ${activeTab === 'create' ? 'ots-tab--active' : ''}`}
           onClick={() => setActiveTab('create')}
         >
           Create OTS
+        </button>
+        <button
+          className={`ots-tab ${activeTab === 'letters' ? 'ots-tab--active' : ''}`}
+          onClick={() => setActiveTab('letters')}
+        >
+          Settlement Letters
         </button>
       </div>
 
@@ -382,9 +632,9 @@ export function OTSPage() {
                         <td>{formatCurrency(ots.originalOutstanding || ots.originalAmount)}</td>
                         <td>{formatCurrency(ots.proposedSettlement || ots.settlementAmount)}</td>
                         <td>
-                          {ots.discountPercentage !== undefined
+                          {ots.discountPercentage != null
                             ? `${ots.discountPercentage.toFixed(1)}%`
-                            : ots.waiverPercentage !== undefined
+                            : ots.waiverPercentage != null
                             ? `${ots.waiverPercentage.toFixed(1)}%`
                             : '-'}
                         </td>
@@ -408,20 +658,6 @@ export function OTSPage() {
                               <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
                             </svg>
                           </button>
-                          {(ots.otsStatus === 'PENDING_APPROVAL' || ots.status === 'PENDING_APPROVAL') && (
-                            <button
-                              className="btn-action btn-action--approve"
-                              title="Review"
-                              onClick={() => {
-                                setReviewingOTSId(ots.id)
-                                setShowApprovalModal(true)
-                              }}
-                            >
-                              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            </button>
-                          )}
                         </td>
                       </tr>
                     ))
@@ -499,9 +735,9 @@ export function OTSPage() {
                       <td>{formatCurrency(ots.originalOutstanding || ots.originalAmount)}</td>
                       <td>{formatCurrency(ots.proposedSettlement || ots.settlementAmount)}</td>
                       <td>
-                        {ots.discountPercentage !== undefined
+                        {ots.discountPercentage != null
                           ? `${ots.discountPercentage.toFixed(1)}%`
-                          : ots.waiverPercentage !== undefined
+                          : ots.waiverPercentage != null
                           ? `${ots.waiverPercentage.toFixed(1)}%`
                           : '-'}
                       </td>
@@ -533,23 +769,153 @@ export function OTSPage() {
             <h2 className="ots-card__title">Create New OTS</h2>
           </div>
           <form className="ots-form" onSubmit={handleCreateSubmit}>
-            <div className="form-grid">
-              <div className="form-group">
-                <label className="form-label">
-                  Case ID <span className="required">*</span>
-                </label>
-                <input
-                  type="number"
-                  className="form-input"
-                  value={createForm.caseId || ''}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, caseId: parseInt(e.target.value) || undefined })
-                  }
-                  placeholder="Enter case ID"
-                  required
-                />
-              </div>
+            {/* Case Search Section */}
+            <div className="case-search-section">
+              <label className="form-label">
+                Search Customer / Case <span className="required">*</span>
+              </label>
 
+              {!selectedCase ? (
+                <div className="case-search-container" ref={caseSearchRef}>
+                  <div className="case-search-input-wrapper">
+                    <svg className="case-search-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+                      <path d="M21 21L16.65 16.65" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    <input
+                      type="text"
+                      className="case-search-input"
+                      value={caseSearchQuery}
+                      onChange={(e) => handleCaseSearchInput(e.target.value)}
+                      placeholder="Search by customer name, mobile, loan account, or case number..."
+                      autoComplete="off"
+                    />
+                    {caseSearchLoading && <div className="case-search-spinner"></div>}
+                  </div>
+
+                  {showCaseDropdown && caseSearchResults.length > 0 && (
+                    <div className="case-search-dropdown">
+                      {caseSearchResults.map((caseItem) => (
+                        <div
+                          key={caseItem.caseId}
+                          className="case-search-result"
+                          onClick={() => handleCaseSelect(caseItem)}
+                        >
+                          <div className="case-search-result__header">
+                            <span className="case-search-result__name">{caseItem.customerName}</span>
+                            <span className="case-search-result__amount">
+                              {formatCurrency(caseItem.totalOutstanding)}
+                            </span>
+                          </div>
+                          <div className="case-search-result__details">
+                            <span className="case-search-result__info">
+                              <strong>Case:</strong> {caseItem.caseNumber}
+                            </span>
+                            <span className="case-search-result__info">
+                              <strong>Loan:</strong> {caseItem.loanAccountNumber}
+                            </span>
+                            {caseItem.customerMobile && (
+                              <span className="case-search-result__info">
+                                <strong>Mobile:</strong> {caseItem.customerMobile}
+                              </span>
+                            )}
+                          </div>
+                          <div className="case-search-result__meta">
+                            {caseItem.productType && (
+                              <span className="case-search-result__tag">{caseItem.productType}</span>
+                            )}
+                            {caseItem.dpd != null && (
+                              <span className="case-search-result__tag case-search-result__tag--dpd">
+                                DPD: {caseItem.dpd}
+                              </span>
+                            )}
+                            {caseItem.bucket && (
+                              <span className="case-search-result__tag">{caseItem.bucket}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {showCaseDropdown && caseSearchResults.length === 0 && caseSearchQuery.length >= 2 && !caseSearchLoading && (
+                    <div className="case-search-dropdown">
+                      <div className="case-search-no-results">
+                        No cases found for "{caseSearchQuery}"
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="selected-case-card">
+                  <div className="selected-case-card__header">
+                    <div className="selected-case-card__info">
+                      <h4 className="selected-case-card__name">{selectedCase.customerName}</h4>
+                      <p className="selected-case-card__case-number">
+                        Case: {selectedCase.caseNumber} | Loan: {selectedCase.loanAccountNumber}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="selected-case-card__clear"
+                      onClick={handleClearCase}
+                      title="Clear selection"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="selected-case-card__details">
+                    <div className="selected-case-card__detail">
+                      <span className="selected-case-card__label">Total Outstanding</span>
+                      <span className="selected-case-card__value selected-case-card__value--highlight">
+                        {formatCurrency(selectedCase.totalOutstanding)}
+                      </span>
+                    </div>
+                    {selectedCase.principalOutstanding != null && (
+                      <div className="selected-case-card__detail">
+                        <span className="selected-case-card__label">Principal</span>
+                        <span className="selected-case-card__value">
+                          {formatCurrency(selectedCase.principalOutstanding)}
+                        </span>
+                      </div>
+                    )}
+                    {selectedCase.interestOutstanding != null && (
+                      <div className="selected-case-card__detail">
+                        <span className="selected-case-card__label">Interest</span>
+                        <span className="selected-case-card__value">
+                          {formatCurrency(selectedCase.interestOutstanding)}
+                        </span>
+                      </div>
+                    )}
+                    {selectedCase.penaltyOutstanding != null && (
+                      <div className="selected-case-card__detail">
+                        <span className="selected-case-card__label">Penalty</span>
+                        <span className="selected-case-card__value">
+                          {formatCurrency(selectedCase.penaltyOutstanding)}
+                        </span>
+                      </div>
+                    )}
+                    {selectedCase.dpd != null && (
+                      <div className="selected-case-card__detail">
+                        <span className="selected-case-card__label">DPD</span>
+                        <span className="selected-case-card__value">{selectedCase.dpd} days</span>
+                      </div>
+                    )}
+                    {selectedCase.productType && (
+                      <div className="selected-case-card__detail">
+                        <span className="selected-case-card__label">Product</span>
+                        <span className="selected-case-card__value">{selectedCase.productType}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Settlement Details Form */}
+            <div className="form-grid">
               <div className="form-group">
                 <label className="form-label">
                   Original Outstanding <span className="required">*</span>
@@ -566,6 +932,7 @@ export function OTSPage() {
                   }
                   placeholder="Enter original outstanding amount"
                   required
+                  readOnly={!!selectedCase}
                 />
               </div>
 
@@ -589,18 +956,6 @@ export function OTSPage() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Discount Preview</label>
-                <div className="discount-preview">
-                  <span className="discount-preview__amount">
-                    {formatCurrency(calculateDiscount().amount)}
-                  </span>
-                  <span className="discount-preview__percentage">
-                    ({calculateDiscount().percentage.toFixed(1)}% waiver)
-                  </span>
-                </div>
-              </div>
-
-              <div className="form-group">
                 <label className="form-label">Payment Mode</label>
                 <select
                   className="form-select"
@@ -619,23 +974,6 @@ export function OTSPage() {
                     </option>
                   ))}
                 </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Installment Count</label>
-                <input
-                  type="number"
-                  className="form-input"
-                  value={createForm.installmentCount || ''}
-                  onChange={(e) =>
-                    setCreateForm({
-                      ...createForm,
-                      installmentCount: parseInt(e.target.value) || undefined,
-                    })
-                  }
-                  placeholder="Number of installments"
-                  min="1"
-                />
               </div>
 
               <div className="form-group">
@@ -693,6 +1031,119 @@ export function OTSPage() {
         </div>
       )}
 
+      {/* Settlement Letters Tab */}
+      {activeTab === 'letters' && (
+        <div className="ots-card">
+          <div className="ots-card__header">
+            <h2 className="ots-card__title">Settlement Letters</h2>
+            <span className="ots-card__count">{lettersTotalElements} letters</span>
+          </div>
+
+          {lettersLoading ? (
+            <div className="loading-container" style={{ minHeight: '200px' }}>
+              <div className="spinner"></div>
+              <span>Loading settlement letters...</span>
+            </div>
+          ) : (
+            <>
+              <div className="table-container">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Letter Number</th>
+                      <th>OTS Number</th>
+                      <th>Customer</th>
+                      <th>Loan Account</th>
+                      <th>Template</th>
+                      <th>Status</th>
+                      <th>Generated</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lettersList.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="empty-row">
+                          No settlement letters found
+                        </td>
+                      </tr>
+                    ) : (
+                      lettersList.map((letter) => (
+                        <tr key={letter.id}>
+                          <td className="cell-mono">{letter.letterNumber}</td>
+                          <td className="cell-mono">{letter.otsNumber}</td>
+                          <td>{letter.customerName}</td>
+                          <td className="cell-mono">{letter.loanAccountNumber}</td>
+                          <td>{letter.templateName}</td>
+                          <td>
+                            <span className={`badge ${getLetterStatusBadgeClass(letter.letterStatus)}`}>
+                              {getLetterStatusLabel(letter.letterStatus)}
+                            </span>
+                          </td>
+                          <td>{formatDateTime(letter.generatedAt)}</td>
+                          <td className="cell-actions">
+                            <button
+                              className="btn-action btn-action--view"
+                              title="View Letter"
+                              onClick={() => handleViewLetter(letter.id)}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+                              </svg>
+                            </button>
+                            <button
+                              className="btn-action btn-action--download"
+                              title="Download PDF"
+                              onClick={() => handleDownloadPdf(letter.id, letter.letterNumber)}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M7 10L12 15L17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {lettersTotalPages > 1 && (
+                <div className="pagination">
+                  <span className="pagination__info">
+                    Showing {lettersPage * 20 + 1} to {Math.min((lettersPage + 1) * 20, lettersTotalElements)} of{' '}
+                    {lettersTotalElements} records
+                  </span>
+                  <div className="pagination__buttons">
+                    <button
+                      className="pagination__btn"
+                      disabled={lettersPage === 0}
+                      onClick={() => setLettersPage(lettersPage - 1)}
+                    >
+                      Previous
+                    </button>
+                    <span className="pagination__page">
+                      Page {lettersPage + 1} of {lettersTotalPages}
+                    </span>
+                    <button
+                      className="pagination__btn"
+                      disabled={lettersPage >= lettersTotalPages - 1}
+                      onClick={() => setLettersPage(lettersPage + 1)}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       {/* View OTS Modal */}
       <ViewOTSModal
         isOpen={showViewModal}
@@ -715,6 +1166,127 @@ export function OTSPage() {
         onReject={handleReject}
         loading={modalLoading}
       />
+
+      {/* Settlement Letter Modal (shown after approval) */}
+      {showLetterModal && approvedOTSForLetter && (
+        <div className="modal-overlay" onClick={() => setShowLetterModal(false)}>
+          <div className="modal modal--large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal__header">
+              <h2>Settlement Letter</h2>
+              <button
+                type="button"
+                className="modal__close"
+                onClick={() => setShowLetterModal(false)}
+              >
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
+            <div className="modal__body">
+              {letterGenerating ? (
+                <div className="letter-generation-content">
+                  <div className="loading-container" style={{ minHeight: '200px' }}>
+                    <div className="spinner"></div>
+                    <span>Loading settlement letter...</span>
+                  </div>
+                </div>
+              ) : !generatedLetter ? (
+                <div className="letter-generation-content">
+                  <div className="letter-generation-success">
+                    <div className="letter-generation-success__icon">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                    <h3>OTS Approved Successfully!</h3>
+                    <p>OTS Number: <strong>{approvedOTSForLetter.otsNumber}</strong></p>
+                    <p>Customer: <strong>{approvedOTSForLetter.customerName}</strong></p>
+                  </div>
+
+                  <div className="letter-generation-form">
+                    <p className="letter-generation-form__info">
+                      Settlement letter could not be loaded. You can view it later from the Settlement Letters tab.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="letter-generated-content">
+                  <div className="letter-generated-success">
+                    <div className="letter-generated-success__icon">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M14 2V8H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M9 15L11 17L15 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                    <h3>Settlement Letter Generated!</h3>
+                    <p>Letter Number: <strong>{generatedLetter.letterNumber}</strong></p>
+                  </div>
+
+                  <div className="letter-generated-details">
+                    <div className="letter-generated-details__item">
+                      <span className="letter-generated-details__label">Customer</span>
+                      <span className="letter-generated-details__value">{generatedLetter.customerName}</span>
+                    </div>
+                    <div className="letter-generated-details__item">
+                      <span className="letter-generated-details__label">OTS Number</span>
+                      <span className="letter-generated-details__value">{generatedLetter.otsNumber}</span>
+                    </div>
+                    <div className="letter-generated-details__item">
+                      <span className="letter-generated-details__label">Template</span>
+                      <span className="letter-generated-details__value">{generatedLetter.templateName}</span>
+                    </div>
+                    <div className="letter-generated-details__item">
+                      <span className="letter-generated-details__label">Status</span>
+                      <span className={`badge ${getLetterStatusBadgeClass(generatedLetter.letterStatus)}`}>
+                        {getLetterStatusLabel(generatedLetter.letterStatus)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="letter-generated-actions">
+                    <button
+                      className="btn btn--primary"
+                      onClick={() => handleViewLetter(generatedLetter.id)}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+                      </svg>
+                      View Letter
+                    </button>
+                    <button
+                      className="btn btn--secondary"
+                      onClick={() => handleDownloadPdf(generatedLetter.id, generatedLetter.letterNumber)}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M7 10L12 15L17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Download
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal__footer">
+              <button
+                className="btn btn--secondary"
+                onClick={() => {
+                  setShowLetterModal(false)
+                  setApprovedOTSForLetter(null)
+                  setGeneratedLetter(null)
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

@@ -297,6 +297,7 @@ export type WorkflowTabType =
   | 'customer-details'
   | 'repayments'
   | 'ptps'
+  | 'ots'
   | 'notices'
   | 'calls'
   | 'sms'

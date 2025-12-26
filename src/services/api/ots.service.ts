@@ -4,7 +4,7 @@
  */
 
 import { apiClient } from './axios.config'
-import type { OTSRequest, CreateOTSRequest, OTSStatus } from '@types'
+import type { OTSRequest, CreateOTSRequest, OTSStatus, OTSCaseSearchDTO } from '@types'
 
 const BASE_URL = '/collections/ots'
 
@@ -32,6 +32,26 @@ const isSuccessResponse = <T>(response: ApiResponse<T>): boolean => {
 }
 
 export const otsService = {
+  // ============ Case Search ============
+
+  /**
+   * Search cases for OTS creation
+   */
+  async searchCasesForOTS(
+    query: string,
+    page = 0,
+    size = 10
+  ): Promise<PageResponse<OTSCaseSearchDTO>> {
+    const response = await apiClient.get<ApiResponse<PageResponse<OTSCaseSearchDTO>>>(
+      `${BASE_URL}/cases/search`,
+      { params: { query, page, size } }
+    )
+    if (isSuccessResponse(response.data) && response.data.data) {
+      return response.data.data
+    }
+    throw new Error(response.data.message || 'Failed to search cases')
+  },
+
   // ============ OTS CRUD Operations ============
 
   /**
@@ -175,16 +195,10 @@ export const otsService = {
    */
   getOTSStatusOptions(): { value: OTSStatus; label: string }[] {
     return [
-      { value: 'DRAFT', label: 'Draft' },
-      { value: 'INTENT_CAPTURED', label: 'Intent Captured' },
       { value: 'PENDING_APPROVAL', label: 'Pending Approval' },
       { value: 'APPROVED', label: 'Approved' },
       { value: 'REJECTED', label: 'Rejected' },
-      { value: 'ACTIVE', label: 'Active' },
-      { value: 'SETTLED', label: 'Settled' },
-      { value: 'COMPLETED', label: 'Completed' },
       { value: 'EXPIRED', label: 'Expired' },
-      { value: 'CANCELLED', label: 'Cancelled' },
     ]
   },
 
